@@ -7,10 +7,10 @@ export default function Footer() {
     <footer className="w-full bg-white font-sans pt-16 pb-8 border-t border-gray-100 relative overflow-hidden">
       {/* Decorative Background Elements */}
       <div className="absolute left-4 top-1/4 opacity-10 pointer-events-none">
-        <span className="text-6xl">🍋</span>
+        <span className="text-6xl"><img src="lemon.png" alt="lemon" className="w-8 h-8 md:w-12 md:h-12" /></span>
       </div>
       <div className="absolute right-8 bottom-1/4 opacity-10 pointer-events-none">
-        <span className="text-6xl">🌶️</span>
+        <span className="text-6xl"><img src="chili.png" alt="chili" className="w-8 h-8 md:w-12 md:h-12"  /></span>
       </div>
 
       <div className="container mx-auto px-4">

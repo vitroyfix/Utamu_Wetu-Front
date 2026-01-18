@@ -1,6 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Hero from "../components/home/Hero";
+import CategoryBanners from "../components/home/CategoryBanners";
+import PopularProducts from "../components/home/PopularProducts";
+import { DailyBestSells } from "../components/home/DailyBestSells";
+import { DealsOfTheDay } from "../components/home/DealsOfTheDay";
+
+// New modular imports based on your screenshots
+import ProductShowcase from "../components/home/ProductShowcase";
+import NewsIcon from "../components/home/NewsIcon";
 
 export default function Home() {
   const [mounted, setMounted] = useState(false);
@@ -12,17 +21,23 @@ export default function Home() {
   if (!mounted) return null; // prevents hydration mismatch
 
   return (
-    <main className="min-h-screen flex flex-col">
-      <section className="flex-grow">
-        <div className="container mx-auto px-4 py-20 text-center">
-          <h1 className="text-4xl font-bold text-gray-800">
-            Welcome to Utamu Wetu
-          </h1>
-          <p className="text-gray-500 mt-4">
-            Building your professional organic food store...
-          </p>
-        </div>
-      </section>
-    </main>
+    <>
+      {/* 1. Main Banner / Hero Section */}
+      <Hero />
+
+      {/* 2. Category Banners (Onions, Juice, etc.) */}
+       <CategoryBanners /> 
+
+      {/* 3. Main Product Grid */}
+       <PopularProducts /> 
+
+      {/* 4. Promotional Daily Sections */}
+       <DailyBestSells/>
+       <DealsOfTheDay/>
+
+      {/* 5. Final Footer-area Sections */}
+       <ProductShowcase />
+       <NewsIcon />
+    </>
   );
 }
