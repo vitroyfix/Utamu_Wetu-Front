@@ -1,13 +1,39 @@
 "use client";
 import React from "react";
 import { Send, Tag, Truck, Headphones, RotateCcw, Box } from "lucide-react";
+import Link from "next/link";
 
 const features = [
-  { icon: <Tag />, title: "Best prices & offers", desc: "Orders $50 or more" },
-  { icon: <Truck />, title: "Free delivery", desc: "24/7 amazing services" },
-  { icon: <Headphones />, title: "Great daily deal", desc: "When you sign up" },
-  { icon: <Box />, title: "Wide assortment", desc: "Mega Discounts" },
-  { icon: <RotateCcw />, title: "Easy returns", desc: "Within 30 days" },
+  { 
+    icon: <Tag />, 
+    title: "Best prices & offers", 
+    desc: "Orders KES 5,000 or more", 
+    link: "/shop?filter=best-offers" 
+  },
+  { 
+    icon: <Truck />, 
+    title: "Free delivery", 
+    desc: "24/7 amazing services", 
+    link: "/shipping" 
+  },
+  { 
+    icon: <Headphones />, 
+    title: "Great daily deal", 
+    desc: "When you sign up", 
+    link: "/deals" 
+  },
+  { 
+    icon: <Box />, 
+    title: "Wide assortment", 
+    desc: "Mega Discounts", 
+    link: "/categories" 
+  },
+  { 
+    icon: <RotateCcw />, 
+    title: "Easy returns", 
+    desc: "Within 30 days", 
+    link: "/returns" 
+  },
 ];
 
 export default function NewsIcon() {
@@ -62,25 +88,26 @@ export default function NewsIcon() {
       <section className="container mx-auto px-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
           {features.map((feature, index) => (
-            <div
-              key={index}
-              className="bg-[#F4F6FA] p-6 rounded-2xl flex items-center gap-4 transition-all hover:shadow-md hover:-translate-y-1 cursor-default"
-            >
-              <div className="text-[#3BB77E] shrink-0">
-                {React.cloneElement(feature.icon as React.ReactElement, {
-                  size: 36,
-                  strokeWidth: 1.5,
-                })}
+            <Link href={feature.link} key={index} className="block">
+              <div
+                className="bg-[#F4F6FA] p-6 rounded-2xl flex items-center gap-4 transition-all hover:shadow-md hover:-translate-y-1 cursor-pointer h-full"
+              >
+                <div className="text-[#3BB77E] shrink-0">
+                  {React.cloneElement(feature.icon as React.ReactElement, {
+                    size: 36,
+                    strokeWidth: 1.5,
+                  })}
+                </div>
+                <div>
+                  <h4 className="text-[#253D4E] font-bold text-sm md:text-base leading-tight">
+                    {feature.title}
+                  </h4>
+                  <p className="text-gray-400 text-xs md:text-sm">
+                    {feature.desc}
+                  </p>
+                </div>
               </div>
-              <div>
-                <h4 className="text-[#253D4E] font-bold text-sm md:text-base leading-tight">
-                  {feature.title}
-                </h4>
-                <p className="text-gray-400 text-xs md:text-sm">
-                  {feature.desc}
-                </p>
-              </div>
-            </div>
+            </Link>
           ))}
         </div>
       </section>

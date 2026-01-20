@@ -25,7 +25,7 @@ export const GET_SHOWCASE_ASSETS = gql`
   }
 `;
 
-// 3. Fetch Popular Products (Main Grid)
+// 3. Fetch Popular Products (Main Grid) - Updated with Best Seller fields
 export const GET_POPULAR_PRODUCTS = gql`
   query GetPopularProducts($categoryName: String) {
     popularProducts(categoryName: $categoryName) {
@@ -34,6 +34,9 @@ export const GET_POPULAR_PRODUCTS = gql`
       price
       oldPrice
       isHotDeal
+      isBestSeller
+      soldCount
+      totalStock
       category { name }
       brand { name }
       weight { value unit }
@@ -44,7 +47,7 @@ export const GET_POPULAR_PRODUCTS = gql`
   }
 `;
 
-// 4. Fetch Deals of the Day
+// 4. Fetch Deals of the Day - Updated with Best Seller fields
 export const GET_DEALS_OF_THE_DAY = gql`
   query GetDeals {
     dealsOfTheDay {
@@ -52,6 +55,10 @@ export const GET_DEALS_OF_THE_DAY = gql`
       title
       price
       oldPrice
+      isHotDeal
+      isBestSeller
+      soldCount
+      totalStock
       category {
         name
       }
