@@ -26,7 +26,8 @@ export default function Home() {
       <Hero />
 
       {/* 2. Category Banners (Onions, Juice, etc.) */}
-       <CategoryBanners /> 
+      <ProductShowcase />
+       
 
       {/* 3. Main Product Grid */}
        <PopularProducts /> 
@@ -36,7 +37,7 @@ export default function Home() {
        <DealsOfTheDay/>
 
       {/* 5. Final Footer-area Sections */}
-       <ProductShowcase />
+       <CategoryBanners /> 
        <NewsIcon />
     </>
   );
