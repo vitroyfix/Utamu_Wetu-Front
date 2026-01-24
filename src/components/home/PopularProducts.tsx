@@ -6,28 +6,23 @@ import { useQuery } from "@apollo/client/react";
 import { GET_CATEGORIES } from "../../lib/queries";
 import { usePopularProducts } from "../../hooks/useStore";
 import Image from "next/image";
+import Link from "next/link"; // Added for navigation
 
 export default function PopularProducts() {
   const [activeCategory, setActiveCategory] = useState("All");
   const [mounted, setMounted] = useState(false);
 
-  // Prevent Hydration Mismatch by waiting for the client to mount
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // 1. Fetch Dynamic Categories from Django
   const { data: catData, loading: catLoading } = useQuery(GET_CATEGORIES);
-
-  // 2. Fetch Products based on the selected category
   const { products, loading, error } = usePopularProducts(activeCategory);
 
-  // Debugging log for your ThinkPad terminal/browser console
   useEffect(() => {
     if (products) console.log("Current Products Data:", products);
   }, [products]);
 
-  // Standard Next.js practice to avoid hydration errors
   if (!mounted) return <div className="min-h-screen bg-white" />;
 
   if (error)
@@ -47,7 +42,6 @@ export default function PopularProducts() {
             Popular Products
           </h2>
           <div className="flex flex-wrap gap-4 md:gap-6">
-            {/* Always show "All" as the default option */}
             <button
               onClick={() => setActiveCategory("All")}
               className={`text-sm font-bold transition-colors ${
@@ -59,7 +53,6 @@ export default function PopularProducts() {
               All
             </button>
 
-            {/* Map through categories fetched from your Django backend */}
             {!catLoading &&
               catData?.allCategories.map((cat: any) => (
                 <button
@@ -86,9 +79,10 @@ export default function PopularProducts() {
                   className="animate-pulse border border-gray-100 rounded-2xl p-4 h-[350px] bg-gray-50"
                 />
               ))
-            : products.map((product) => {
-                // Safe extraction of the absolute image URL from the gallery
+            : products.map((product: any) => {
                 const imageUrl = product.images?.[0]?.image;
+                // Generate the dynamic link using the slug
+                const productLink = `/product/${product.slug}`;
 
                 return (
                   <div
@@ -101,35 +95,41 @@ export default function PopularProducts() {
                       </span>
                     )}
 
-                    {/* Image Section with unoptimized=true for local Django media */}
-                    <div className="h-44 flex items-center justify-center mb-4 mt-2 overflow-hidden bg-white-50 rounded-lg relative">
-                      {imageUrl ? (
-                        <Image
-                          src={imageUrl}
-                          alt={product.title}
-                          width={150}
-                          height={150}
-                          className="object-contain group-hover:scale-105 transition-transform duration-300"
-                          unoptimized={true}
-                        />
-                      ) : (
-                        <div className="flex flex-col items-center justify-center text-gray-400">
-                          <span className="text-3xl mb-1">N/A</span>
-                          <span className="text-[10px] uppercase font-bold">
-                            No Image
-                          </span>
-                        </div>
-                      )}
-                    </div>
+                    {/* Image Section - Wrapped in Link */}
+                    <Link href={productLink} className="cursor-pointer">
+                      <div className="h-44 flex items-center justify-center mb-4 mt-2 overflow-hidden bg-white-50 rounded-lg relative">
+                        {imageUrl ? (
+                          <Image
+                            src={imageUrl}
+                            alt={product.title}
+                            width={150}
+                            height={150}
+                            className="object-contain group-hover:scale-105 transition-transform duration-300"
+                            unoptimized={true}
+                          />
+                        ) : (
+                          <div className="flex flex-col items-center justify-center text-gray-400">
+                            <span className="text-3xl mb-1">N/A</span>
+                            <span className="text-[10px] uppercase font-bold">
+                              No Image
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </Link>
 
                     {/* Product Details */}
                     <div className="flex flex-col flex-grow">
                       <span className="text-gray-400 text-[11px] mb-1">
                         {product.category?.name || "General"}
                       </span>
-                      <h3 className="text-[#253D4E] font-bold text-[14px] leading-tight mb-2 h-10 line-clamp-2">
-                        {product.title}
-                      </h3>
+                      
+                      {/* Title - Wrapped in Link */}
+                      <Link href={productLink}>
+                        <h3 className="text-[#253D4E] font-bold text-[14px] leading-tight mb-2 h-10 line-clamp-2 hover:text-[#3BB77E] transition-colors cursor-pointer">
+                          {product.title}
+                        </h3>
+                      </Link>
 
                       {/* Stats & Brand */}
                       <div className="flex items-center gap-1 mb-1">
