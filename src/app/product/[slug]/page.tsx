@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, use } from "react";
+import React, { useState, use, useCallback, useEffect } from "react"; 
 import { useQuery } from "@apollo/client/react";
 import { GET_PRODUCT_DETAILS, GET_POPULAR_PRODUCTS } from "../../../lib/queries";
 import {
@@ -19,7 +19,7 @@ import {
 import Image from "next/image";
 import ProductSidebar from "../../../components/product/ProductSidebar";
 
-// Sub-component for the imminent results grid
+// Sub-component for the grid
 function PopularProductsGrid({ filters }: { filters: any }) {
   const { data, loading } = useQuery(GET_POPULAR_PRODUCTS, {
     variables: {
@@ -31,6 +31,20 @@ function PopularProductsGrid({ filters }: { filters: any }) {
   });
 
   const products = data?.popularProducts || [];
+
+  const addItemToCart = (item: any) => {
+    const currentCart = JSON.parse(localStorage.getItem("cartItems") || "[]");
+    const existingItemIndex = currentCart.findIndex((cartItem: any) => cartItem.id === item.id);
+
+    if (existingItemIndex > -1) {
+      currentCart[existingItemIndex].qty += 1;
+    } else {
+      currentCart.push({ ...item, qty: 1 });
+    }
+
+    localStorage.setItem("cartItems", JSON.stringify(currentCart));
+    window.dispatchEvent(new Event("cartUpdated"));
+  };
 
   return (
     <div className="mt-16 pt-10 border-t border-gray-100">
@@ -53,16 +67,16 @@ function PopularProductsGrid({ filters }: { filters: any }) {
               <h3 className="text-[#253D4E] font-bold text-sm line-clamp-2 mb-2 h-10">{item.title}</h3>
               <div className="flex items-center justify-between">
                 <span className="text-[#3BB77E] font-bold">KES {parseFloat(item.price).toLocaleString()}</span>
-                <button className="bg-[#def9ec] text-[#3BB77E] p-2 rounded-lg hover:bg-[#3BB77E] hover:text-white transition-colors">
+                <button 
+                  onClick={() => addItemToCart(item)}
+                  className="bg-[#def9ec] text-[#3BB77E] p-2 rounded-lg hover:bg-[#3BB77E] hover:text-white transition-colors"
+                >
                   <ShoppingCart size={16}/>
                 </button>
               </div>
             </div>
           ))}
         </div>
-      )}
-      {!loading && products.length === 0 && (
-        <p className="text-center text-gray-400 italic py-10 bg-gray-50 rounded-2xl">No matches found for your current selection.</p>
       )}
     </div>
   );
@@ -84,25 +98,45 @@ export default function ProductDetailsPage({
     skip: !slug,
   });
 
-  if (loading)
-    return (
-      <div className="p-10 text-center animate-pulse text-[#3BB77E] font-bold">
-        Loading Fresh Products...
-      </div>
-    );
-  if (error || !data?.productBySlug)
-    return (
-      <div className="p-10 text-center font-bold text-[#253D4E]">
-        Product not found.
-      </div>
-    );
+  useEffect(() => {
+    if (data?.productBySlug) {
+      const product = data.productBySlug;
+      const recentViewed = JSON.parse(localStorage.getItem("recentlyViewed") || "[]");
+      const updatedList = [
+        product,
+        ...recentViewed.filter((item: any) => item.id !== product.id)
+      ].slice(0, 10);
+      localStorage.setItem("recentlyViewed", JSON.stringify(updatedList));
+    }
+  }, [data]);
+
+  const addToCart = () => {
+    const product = data.productBySlug;
+    const currentCart = JSON.parse(localStorage.getItem("cartItems") || "[]");
+    const existingItemIndex = currentCart.findIndex((item: any) => item.id === product.id);
+
+    if (existingItemIndex > -1) {
+      currentCart[existingItemIndex].qty += quantity;
+    } else {
+      currentCart.push({ ...product, qty: quantity });
+    }
+
+    localStorage.setItem("cartItems", JSON.stringify(currentCart));
+    window.dispatchEvent(new Event("cartUpdated"));
+  };
+
+  const handleFilterChange = useCallback((newFilters: any) => {
+    setFilters(newFilters);
+  }, []);
+
+  if (loading) return <div className="p-10 text-center animate-pulse text-[#3BB77E] font-bold">Loading Fresh Products...</div>;
+  if (error || !data?.productBySlug) return <div className="p-10 text-center font-bold text-[#253D4E]">Product not found.</div>;
 
   const product = data.productBySlug;
   const galleryImages = product.images || [];
   const nutritionText = product.nutritionalInfo || "";
 
-  const increment = () =>
-    quantity < (product.maxOrder || 12) && setQuantity((prev) => prev + 1);
+  const increment = () => quantity < (product.maxOrder || 12) && setQuantity((prev) => prev + 1);
   const decrement = () => quantity > 1 && setQuantity((prev) => prev - 1);
 
   return (
@@ -119,7 +153,7 @@ export default function ProductDetailsPage({
       <div className="container mx-auto px-4 pb-12">
         <div className="flex flex-col lg:flex-row gap-8 lg:gap-12">
           <div className="w-full lg:w-1/4 shrink-0">
-            <ProductSidebar onFilterChange={(newFilters: any) => setFilters(newFilters)} />
+            <ProductSidebar onFilterChange={handleFilterChange} />
           </div>
 
           <div className="flex-1 border border-[#3BB77E]/20 rounded-2xl p-4 md:p-8 bg-white shadow-sm">
@@ -127,64 +161,29 @@ export default function ProductDetailsPage({
               <div className="space-y-4">
                 <div className="border border-gray-100 rounded-xl overflow-hidden p-4 bg-white flex items-center justify-center aspect-square md:h-[450px]">
                   {galleryImages[selectedImage] && (
-                    <Image
-                      src={galleryImages[selectedImage].image}
-                      alt={product.title}
-                      width={600}
-                      height={600}
-                      className="w-full h-full object-contain hover:scale-105 transition-transform duration-500"
-                      unoptimized
-                    />
+                    <Image src={galleryImages[selectedImage].image} alt={product.title} width={600} height={600} className="w-full h-full object-contain hover:scale-105 transition-transform duration-500" unoptimized />
                   )}
                 </div>
                 <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
                   {galleryImages.map((img: any, idx: number) => (
-                    <button
-                      key={idx}
-                      onClick={() => setSelectedImage(idx)}
-                      className={`w-16 h-16 border rounded-lg overflow-hidden shrink-0 transition-all ${selectedImage === idx ? "border-[#3BB77E]" : "border-gray-100 opacity-60"}`}
-                    >
-                      <Image
-                        src={img.image}
-                        alt="Thumb"
-                        width={80}
-                        height={80}
-                        className="object-cover w-full h-full"
-                        unoptimized
-                      />
+                    <button key={idx} onClick={() => setSelectedImage(idx)} className={`w-16 h-16 border rounded-lg overflow-hidden shrink-0 transition-all ${selectedImage === idx ? "border-[#3BB77E]" : "border-gray-100 opacity-60"}`}>
+                      <Image src={img.image} alt="Thumb" width={80} height={80} className="object-cover w-full h-full" unoptimized />
                     </button>
                   ))}
                 </div>
               </div>
 
               <div className="flex flex-col">
-                <h1 className="text-[#253D4E] text-2xl md:text-3xl font-bold mb-3">
-                  {product.title}
-                </h1>
+                <h1 className="text-[#253D4E] text-2xl md:text-3xl font-bold mb-3">{product.title}</h1>
                 <div className="flex items-center gap-2 mb-6 text-[#FDC040]">
-                  <div className="flex font-bold">
-                    {[...Array(5)].map((_, i) => (
-                      <Star key={i} size={14} fill="currentColor" />
-                    ))}
-                  </div>
-                  <span className="text-gray-400 text-xs ml-2">
-                    ( 75 Reviews )
-                  </span>
+                  <div className="flex font-bold">{[...Array(5)].map((_, i) => (<Star key={i} size={14} fill="currentColor" />))}</div>
+                  <span className="text-gray-400 text-xs ml-2">( 75 Reviews )</span>
                 </div>
 
                 <div className="space-y-2 text-sm mb-8 border-b border-gray-100 pb-6">
-                  <p className="flex gap-2">
-                    <span className="font-bold text-gray-700 min-w-[100px]">Brand:</span>{" "}
-                    <span className="text-gray-500">{product.brand?.name}</span>
-                  </p>
-                  <p className="flex gap-2">
-                    <span className="font-bold text-gray-700 min-w-[100px]">Weight:</span>{" "}
-                    <span className="text-gray-500">{product.weight?.value} {product.weight?.unit}</span>
-                  </p>
-                  <p className="flex gap-2">
-                    <span className="font-bold text-gray-700 min-w-[100px]">Product SKU:</span>{" "}
-                    <span className="text-gray-500 font-mono uppercase">{product.sku}</span>
-                  </p>
+                  <p className="flex gap-2"><span className="font-bold text-gray-700 min-w-[100px]">Brand:</span> <span className="text-gray-500">{product.brand?.name}</span></p>
+                  <p className="flex gap-2"><span className="font-bold text-gray-700 min-w-[100px]">Weight:</span> <span className="text-gray-500">{product.weight?.value} {product.weight?.unit}</span></p>
+                  <p className="flex gap-2"><span className="font-bold text-gray-700 min-w-[100px]">Product SKU:</span> <span className="text-gray-500 font-mono uppercase">{product.sku}</span></p>
                 </div>
 
                 <div className="flex items-center gap-4 mb-8">
@@ -195,10 +194,10 @@ export default function ProductDetailsPage({
                 <div className="flex flex-wrap items-center gap-4">
                   <div className="flex items-center border border-gray-200 rounded-md h-12 overflow-hidden bg-white shadow-sm">
                     <button onClick={decrement} className="w-10 h-full hover:bg-gray-50 text-gray-400 transition-colors">−</button>
-                    <input type="number" value={quantity} readOnly className="w-12 text-center font-bold text-sm text-[#253D4E] outline-none appearance-none m-0 bg-transparent " style={{ WebkitAppearance: "none", MozAppearance: "textfield" }} />
+                    <input type="number" value={quantity} readOnly className="w-12 text-center font-bold text-sm text-[#253D4E] outline-none appearance-none m-0 bg-transparent" />
                     <button onClick={increment} className="w-10 h-full hover:bg-gray-50 text-gray-400 transition-colors">+</button>
                   </div>
-                  <button className="flex-1 bg-[#3BB77E] hover:bg-[#2e9163] text-white px-10 h-12 rounded-md font-bold text-sm flex items-center justify-center gap-2 transition-all shadow-lg shadow-[#3BB77E]/20">
+                  <button onClick={addToCart} className="flex-1 bg-[#3BB77E] hover:bg-[#2e9163] text-white px-10 h-12 rounded-md font-bold text-sm flex items-center justify-center gap-2 transition-all shadow-lg shadow-[#3BB77E]/20 active:scale-95">
                     <ShoppingCart size={18} /> Add To Cart
                   </button>
                 </div>
@@ -210,15 +209,10 @@ export default function ProductDetailsPage({
                 <h4 className="text-[#253D4E] font-bold text-xl mb-6 underline decoration-[#3BB77E] underline-offset-8">
                   1. Product Overview
                 </h4>
-                <p className="text-gray-600 mb-6 leading-7 text-sm max-w-4xl">
-                  {product.description}.
-                </p>
+                <p className="text-gray-600 mb-6 leading-7 text-sm max-w-4xl">{product.description}.</p>
 
                 {!isExpanded && (
-                  <button
-                    onClick={() => setIsExpanded(true)}
-                    className="flex items-center gap-2 text-[#3BB77E] font-bold text-sm hover:underline"
-                  >
+                  <button onClick={() => setIsExpanded(true)} className="flex items-center gap-2 text-[#3BB77E] font-bold text-sm hover:underline">
                     Read Full Technical Specs <ChevronDown size={16} />
                   </button>
                 )}
@@ -228,26 +222,20 @@ export default function ProductDetailsPage({
                 <div className="space-y-16 pt-8 border-t border-gray-100 animate-in slide-in-from-top-4 duration-700">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-12 text-sm">
                     <div className="space-y-4">
-                      <h5 className="font-bold text-[#253D4E] uppercase text-xs tracking-widest flex items-center gap-2 font-bold">
-                        <Info size={14} /> Product Identity
-                      </h5>
+                      <h5 className="font-bold text-[#253D4E] uppercase text-xs tracking-widest flex items-center gap-2 font-bold"><Info size={14} /> Product Identity</h5>
                       <p><span className="text-gray-400 font-bold mr-2">SKU:</span>{product.sku}</p>
                       <p><span className="text-gray-400 font-bold mr-2">Barcode:</span>{product.barcode}</p>
                       <p><span className="text-gray-400 font-bold mr-2">Type:</span>{product.productType}</p>
                     </div>
                     <div className="space-y-4">
-                      <h5 className="font-bold text-[#253D4E] uppercase text-xs tracking-widest flex items-center gap-2 font-bold">
-                        <Truck size={14} /> Commercial Information
-                      </h5>
+                      <h5 className="font-bold text-[#253D4E] uppercase text-xs tracking-widest flex items-center gap-2 font-bold"><Truck size={14} /> Commercial Information</h5>
                       <p><span className="text-gray-400 font-bold mr-2">Packaging:</span>{product.packagingType}</p>
                       <p><span className="text-gray-400 font-bold mr-2">Max Order:</span>{Math.floor(product.maxOrder / 12)} Dozen to be delivered</p>
                     </div>
                   </div>
 
                   <div className="space-y-8">
-                    <h5 className="font-bold text-[#253D4E] uppercase text-xs tracking-widest flex items-center gap-2 font-bold">
-                      <Leaf size={14} /> Nutritional Content
-                    </h5>
+                    <h5 className="font-bold text-[#253D4E] uppercase text-xs tracking-widest flex items-center gap-2 font-bold"><Leaf size={14} /> Nutritional Content</h5>
                     <p className="text-gray-600 italic leading-relaxed text-sm">Ingredients: {product.ingredients}.</p>
                     <div className="border-y border-gray-50 py-10">
                       <p className="text-[#3BB77E] font-medium text-base leading-relaxed whitespace-pre-wrap">{nutritionText || "Nutritional information pending batch laboratory verification."}</p>
@@ -272,6 +260,8 @@ export default function ProductDetailsPage({
                       </p>
                     </div>
                   </div>
+
+                  {/* RESTORED FULL ALLERGEN MESSAGE */}
                   <div className="p-8 bg-red-50 border-2 border-red-100 rounded-[2rem] shadow-inner mt-12">
                     <h5 className="text-red-700 font-black uppercase text-xs tracking-[0.2em] mb-4 flex items-center gap-2">
                       <AlertTriangle size={18} className="animate-pulse" /> 9. Allergens & Safety Warnings
@@ -294,38 +284,9 @@ export default function ProductDetailsPage({
                   </button>
                 </div>
               )}
-
-              {/* Verified Reviews Section */}
-              <div className="pt-20 border-t border-gray-100">
-                <h4 className="text-[#253D4E] font-bold text-xl mb-10 flex items-center gap-3">
-                  <span className="w-1.5 h-8 bg-[#3BB77E] rounded-full" />
-                  Verified Customer Feedback
-                </h4>
-
-                <div className="space-y-8 max-w-5xl">
-                  <div className="flex gap-4 p-8 bg-[#F9FBFA] rounded-[2rem] border border-[#3BB77E]/5 shadow-sm">
-                    <div className="w-14 h-14 rounded-full bg-[#3BB77E] text-white flex items-center justify-center font-black text-xl shrink-0">PW</div>
-                    <div className="space-y-3 flex-1">
-                      <div className="flex justify-between items-start flex-wrap gap-2">
-                        <h5 className="text-[#253D4E] font-bold text-base flex items-center gap-2 leading-none">Peter Wangimwa <CheckCircle size={14} className="text-[#3BB77E] fill-[#3BB77E]/10" /></h5>
-                        <div className="flex text-[#FDC040]">
-                          {[...Array(5)].map((_, i) => (<Star key={i} size={14} fill="currentColor" />))}
-                        </div>
-                      </div>
-                      <p className="text-gray-600 italic text-sm leading-relaxed border-l-2 border-[#3BB77E]/20 pl-4 py-1">"The technical photos helped me verify the expiration standards. Excellent batch."</p>
-                    </div>
-                  </div>
-
-                  <button className="w-full py-4 bg-white border-2 border-[#3BB77E]/20 text-[#3BB77E] font-bold rounded-2xl transition-all text-xs uppercase tracking-widest shadow-sm flex items-center justify-center gap-2">
-                    <User size={16} /> Write Your Review
-                  </button>
-                </div>
-              </div>
-
-              {/* DYNAMIC PRODUCT LISTING */}
-              <PopularProductsGrid filters={filters} />
-              
             </div>
+
+            <PopularProductsGrid filters={filters} />
           </div>
         </div>
       </div>

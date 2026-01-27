@@ -8,6 +8,30 @@ import Image from "next/image";
 export function DailyBestSells() {
   const { data, loading, error } = useQuery(GET_POPULAR_PRODUCTS);
 
+  // --- ADD TO CART LOGIC ---
+  const addToCart = (product: any) => {
+    // 1. Get current cart from localStorage
+    const currentCart = JSON.parse(localStorage.getItem("cartItems") || "[]");
+    
+    // 2. Check if product already exists
+    const existingItemIndex = currentCart.findIndex((item: any) => item.id === product.id);
+
+    if (existingItemIndex > -1) {
+      // Increment quantity if it exists
+      currentCart[existingItemIndex].qty += 1;
+    } else {
+      // Add as new item with quantity 1
+      currentCart.push({ ...product, qty: 1 });
+    }
+
+    // 3. Save back to localStorage
+    localStorage.setItem("cartItems", JSON.stringify(currentCart));
+    
+    // 4. Trigger custom event to notify Navbar
+    window.dispatchEvent(new Event("cartUpdated"));
+  };
+  // -------------------------
+
   if (error) return null;
 
   const bestSellers =
@@ -123,7 +147,11 @@ export function DailyBestSells() {
                           <p className="text-gray-500 text-[11px] mb-4 font-medium">
                             Sold: {soldCount}/{totalStock}
                           </p>
-                          <button className="w-full bg-[#3BB77E] hover:bg-[#2e9163] text-white py-2.5 rounded-md font-bold text-xs flex items-center justify-center gap-2 transition-all active:scale-95">
+                          {/* ATTACHED ADD TO CART HANDLER HERE */}
+                          <button 
+                            onClick={() => addToCart(product)}
+                            className="w-full bg-[#3BB77E] hover:bg-[#2e9163] text-white py-2.5 rounded-md font-bold text-xs flex items-center justify-center gap-2 transition-all active:scale-95"
+                          >
                             <ShoppingCart size={16} /> Add To Cart
                           </button>
                         </div>

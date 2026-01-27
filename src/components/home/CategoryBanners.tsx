@@ -15,9 +15,6 @@ export default function CategoryBanner() {
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
-  // Debugging: Watch your terminal/browser console for this
-  console.log("Current Products Data:", data?.popularProducts);
-
   if (!mounted) return null;
   if (loading)
     return (
@@ -34,7 +31,6 @@ export default function CategoryBanner() {
 
   const products = data?.popularProducts || [];
 
-  // Grouping products into 4 categories only if data exists
   const collections =
     products.length > 0
       ? [
@@ -63,18 +59,19 @@ export default function CategoryBanner() {
                 {/* Vertical Product List */}
                 <div className="flex flex-col gap-6">
                   {col.items.map((product: any) => (
+                    /* UPDATED: Redirecting using slug instead of ID for dynamic routing */
                     <Link
-                      href={`/product/${product.id}`}
+                      href={`/product/${product.slug}`}
                       key={product.id}
-                      className="flex items-center gap-4 group"
+                      className="flex items-center gap-4 group cursor-pointer"
                     >
-                      {/* Image Box - Fixed with sizes prop */}
+                      {/* Image Box */}
                       <div className="relative w-24 h-24 flex-shrink-0 bg-[#F4F6FA] rounded-xl overflow-hidden">
                         <Image
                           src={product.images[0]?.image || "/placeholder.png"}
                           alt={product.title}
                           fill
-                          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
+                          sizes="96px"
                           className="object-contain p-2 transition-transform duration-500 group-hover:scale-110"
                           unoptimized={true}
                         />
@@ -91,11 +88,11 @@ export default function CategoryBanner() {
                         </div>
                         <div className="flex items-center gap-2 mt-1">
                           <span className="text-[#3BB77E] font-bold">
-                            ${product.price}
+                            KES {parseFloat(product.price).toLocaleString()}
                           </span>
                           {product.oldPrice && (
                             <span className="text-xs text-gray-400 line-through">
-                              ${product.oldPrice}
+                              KES {parseFloat(product.oldPrice).toLocaleString()}
                             </span>
                           )}
                         </div>
@@ -108,7 +105,7 @@ export default function CategoryBanner() {
           </div>
         ) : (
           <div className="text-center py-10 text-gray-400">
-            No products found. Add products in Django Admin to see them here.
+            No products found.
           </div>
         )}
       </div>

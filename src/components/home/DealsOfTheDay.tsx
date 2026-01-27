@@ -6,7 +6,24 @@ import { GET_DEALS_OF_THE_DAY } from "../../lib/queries";
 import Image from "next/image";
 
 export function DealsOfTheDay() {
- const { data, loading, error } = useQuery(GET_DEALS_OF_THE_DAY);
+  const { data, loading, error } = useQuery(GET_DEALS_OF_THE_DAY);
+
+  const addToCart = (product: any) => {
+    const currentCart = JSON.parse(localStorage.getItem("cartItems") || "[]");
+    const existingItemIndex = currentCart.findIndex(
+      (item: any) => item.id === product.id,
+    );
+
+    if (existingItemIndex > -1) {
+      currentCart[existingItemIndex].qty += 1;
+    } else {
+      currentCart.push({ ...product, qty: 1 });
+    }
+
+    localStorage.setItem("cartItems", JSON.stringify(currentCart));
+
+    window.dispatchEvent(new Event("cartUpdated"));
+  };
 
   if (error) return null;
 
@@ -109,7 +126,11 @@ export function DealsOfTheDay() {
                             </span>
                           )}
                         </div>
-                        <button className="bg-[#DEF9EC] text-[#3BB77E] hover:bg-[#3BB77E] hover:text-white px-4 py-2 rounded-md text-sm font-bold flex items-center gap-1 transition-all active:scale-95">
+                        {/* ATTACHED ADD TO CART HANDLER HERE */}
+                        <button
+                          onClick={() => addToCart(product)}
+                          className="bg-[#DEF9EC] text-[#3BB77E] hover:bg-[#3BB77E] hover:text-white px-4 py-2 rounded-md text-sm font-bold flex items-center gap-1 transition-all active:scale-95"
+                        >
                           <ShoppingCart size={14} />
                           Add
                         </button>

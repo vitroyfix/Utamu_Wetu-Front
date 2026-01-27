@@ -6,7 +6,7 @@ import { useQuery } from "@apollo/client/react";
 import { GET_CATEGORIES } from "../../lib/queries";
 import { usePopularProducts } from "../../hooks/useStore";
 import Image from "next/image";
-import Link from "next/link"; // Added for navigation
+import Link from "next/link";
 
 export default function PopularProducts() {
   const [activeCategory, setActiveCategory] = useState("All");
@@ -18,6 +18,24 @@ export default function PopularProducts() {
 
   const { data: catData, loading: catLoading } = useQuery(GET_CATEGORIES);
   const { products, loading, error } = usePopularProducts(activeCategory);
+
+  const addToCart = (product: any) => {
+    const currentCart = JSON.parse(localStorage.getItem("cartItems") || "[]");
+    const existingItemIndex = currentCart.findIndex(
+      (item: any) => item.id === product.id,
+    );
+
+    if (existingItemIndex > -1) {
+      currentCart[existingItemIndex].qty += 1;
+    } else {
+      currentCart.push({ ...product, qty: 1 });
+    }
+
+    localStorage.setItem("cartItems", JSON.stringify(currentCart));
+
+    window.dispatchEvent(new Event("cartUpdated"));
+  };
+  // -------------------------
 
   useEffect(() => {
     if (products) console.log("Current Products Data:", products);
@@ -81,7 +99,6 @@ export default function PopularProducts() {
               ))
             : products.map((product: any) => {
                 const imageUrl = product.images?.[0]?.image;
-                // Generate the dynamic link using the slug
                 const productLink = `/product/${product.slug}`;
 
                 return (
@@ -95,7 +112,6 @@ export default function PopularProducts() {
                       </span>
                     )}
 
-                    {/* Image Section - Wrapped in Link */}
                     <Link href={productLink} className="cursor-pointer">
                       <div className="h-44 flex items-center justify-center mb-4 mt-2 overflow-hidden bg-white-50 rounded-lg relative">
                         {imageUrl ? (
@@ -118,20 +134,17 @@ export default function PopularProducts() {
                       </div>
                     </Link>
 
-                    {/* Product Details */}
                     <div className="flex flex-col flex-grow">
                       <span className="text-gray-400 text-[11px] mb-1">
                         {product.category?.name || "General"}
                       </span>
-                      
-                      {/* Title - Wrapped in Link */}
+
                       <Link href={productLink}>
                         <h3 className="text-[#253D4E] font-bold text-[14px] leading-tight mb-2 h-10 line-clamp-2 hover:text-[#3BB77E] transition-colors cursor-pointer">
                           {product.title}
                         </h3>
                       </Link>
 
-                      {/* Stats & Brand */}
                       <div className="flex items-center gap-1 mb-1">
                         <Star
                           size={12}
@@ -153,7 +166,6 @@ export default function PopularProducts() {
                         </span>
                       </div>
 
-                      {/* Price & Cart Action */}
                       <div className="flex items-center justify-between mt-auto">
                         <div className="flex flex-col">
                           <span className="text-[#3BB77E] font-bold text-lg">
@@ -166,7 +178,11 @@ export default function PopularProducts() {
                             </span>
                           )}
                         </div>
-                        <button className="bg-[#DEF9EC] text-[#3BB77E] hover:bg-[#3BB77E] hover:text-white px-3 py-1.5 rounded-md text-sm font-bold flex items-center gap-1 transition-all active:scale-95">
+                        {/* ATTACHED ADD TO CART HANDLER HERE */}
+                        <button
+                          onClick={() => addToCart(product)}
+                          className="bg-[#DEF9EC] text-[#3BB77E] hover:bg-[#3BB77E] hover:text-white px-3 py-1.5 rounded-md text-sm font-bold flex items-center gap-1 transition-all active:scale-95"
+                        >
                           <ShoppingCart size={14} />
                           Add
                         </button>

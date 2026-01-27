@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useQuery } from "@apollo/client/react";
 import { gql } from "@apollo/client"
 
@@ -39,6 +39,9 @@ export default function ProductSidebar({ onFilterChange }: { onFilterChange?: (f
   const [selectedWeight, setSelectedWeight] = useState<string | null>(null);
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
 
+  // Use a ref to track the last sent filters to prevent the infinite loop
+  const lastFiltersRef = useRef<string>("");
+
   useEffect(() => {
     if (categories.length > 0) {
       const highest = Math.max(...categories.map((c: any) => c.maxPrice || 0));
@@ -48,14 +51,24 @@ export default function ProductSidebar({ onFilterChange }: { onFilterChange?: (f
       }
     }
   }, [categories]);
+
   useEffect(() => {
     if (onFilterChange) {
-      onFilterChange({
+      const currentFilters = {
         category: selectedCategory,
         weight: selectedWeight,
         tag: selectedTag,
         maxPrice: currentPrice
-      });
+      };
+      
+      // Stringify for a quick deep equality check
+      const filtersString = JSON.stringify(currentFilters);
+      
+      // ONLY trigger the update if the values have actually changed
+      if (lastFiltersRef.current !== filtersString) {
+        lastFiltersRef.current = filtersString;
+        onFilterChange(currentFilters);
+      }
     }
   }, [selectedCategory, selectedWeight, selectedTag, currentPrice, onFilterChange]);
 
