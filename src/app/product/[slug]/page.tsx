@@ -19,7 +19,7 @@ import {
 import Image from "next/image";
 import ProductSidebar from "../../../components/product/ProductSidebar";
 
-// Sub-component for the grid
+// Sub-component for the grid remains as per your structure
 function PopularProductsGrid({ filters }: { filters: any }) {
   const { data, loading } = useQuery(GET_POPULAR_PRODUCTS, {
     variables: {
@@ -92,6 +92,9 @@ export default function ProductDetailsPage({
   const [isExpanded, setIsExpanded] = useState(false);
   const [quantity, setQuantity] = useState(1);
   const [filters, setFilters] = useState({ category: null, weight: null, tag: null, maxPrice: 5000 });
+  
+  // New state for "Added to Cart" feedback
+  const [isAdded, setIsAdded] = useState(false);
 
   const { data, loading, error } = useQuery(GET_PRODUCT_DETAILS, {
     variables: { slug },
@@ -123,6 +126,10 @@ export default function ProductDetailsPage({
 
     localStorage.setItem("cartItems", JSON.stringify(currentCart));
     window.dispatchEvent(new Event("cartUpdated"));
+
+    // Trigger visual feedback
+    setIsAdded(true);
+    setTimeout(() => setIsAdded(false), 2000);
   };
 
   const handleFilterChange = useCallback((newFilters: any) => {
@@ -159,9 +166,15 @@ export default function ProductDetailsPage({
           <div className="flex-1 border border-[#3BB77E]/20 rounded-2xl p-4 md:p-8 bg-white shadow-sm">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-10 mb-12">
               <div className="space-y-4">
-                <div className="border border-gray-100 rounded-xl overflow-hidden p-4 bg-white flex items-center justify-center aspect-square md:h-[450px]">
+                <div className="border border-gray-100 rounded-xl overflow-hidden p-2 bg-white relative w-full aspect-square md:h-[450px]">
                   {galleryImages[selectedImage] && (
-                    <Image src={galleryImages[selectedImage].image} alt={product.title} width={600} height={600} className="w-full h-full object-contain hover:scale-105 transition-transform duration-500" unoptimized />
+                    <Image 
+                      src={galleryImages[selectedImage].image} 
+                      alt={product.title} 
+                      fill
+                      className="object-contain p-2 hover:scale-105 transition-transform duration-500" 
+                      unoptimized 
+                    />
                   )}
                 </div>
                 <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
@@ -197,8 +210,21 @@ export default function ProductDetailsPage({
                     <input type="number" value={quantity} readOnly className="w-12 text-center font-bold text-sm text-[#253D4E] outline-none appearance-none m-0 bg-transparent" />
                     <button onClick={increment} className="w-10 h-full hover:bg-gray-50 text-gray-400 transition-colors">+</button>
                   </div>
-                  <button onClick={addToCart} className="flex-1 bg-[#3BB77E] hover:bg-[#2e9163] text-white px-10 h-12 rounded-md font-bold text-sm flex items-center justify-center gap-2 transition-all shadow-lg shadow-[#3BB77E]/20 active:scale-95">
-                    <ShoppingCart size={18} /> Add To Cart
+                  {/* Updated Button with "isAdded" conditional styling and content */}
+                  <button 
+                    onClick={addToCart} 
+                    disabled={isAdded}
+                    className={`flex-1 ${isAdded ? 'bg-orange-500' : 'bg-[#3BB77E] hover:bg-[#2e9163]'} text-white px-10 h-12 rounded-md font-bold text-sm flex items-center justify-center gap-2 transition-all shadow-lg active:scale-95`}
+                  >
+                    {isAdded ? (
+                      <>
+                        <CheckCircle size={18} /> Added!
+                      </>
+                    ) : (
+                      <>
+                        <ShoppingCart size={18} /> Add To Cart
+                      </>
+                    )}
                   </button>
                 </div>
               </div>

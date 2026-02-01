@@ -8,7 +8,8 @@ import {
   Minus, 
   ArrowLeft, 
   ShoppingBag, 
-  Star 
+  Star,
+  Check // Added for feedback
 } from "lucide-react";
 import { useQuery } from "@apollo/client/react";
 import { GET_POPULAR_PRODUCTS } from "../../lib/queries";
@@ -21,12 +22,18 @@ export default function CartPage() {
   const [cartItems, setCartItems] = useState<any[]>([]);
   const [recentlyViewed, setRecentlyViewed] = useState<any[]>([]);
   const [isMounted, setIsMounted] = useState(false);
+  
+  // State to track which item was just added for visual feedback
+  const [addedItemId, setAddedItemId] = useState<number | null>(null);
 
   useEffect(() => {
     const savedHistory = localStorage.getItem("recentlyViewed");
     const savedCart = localStorage.getItem("cartItems");
+    
+    const parsedCart = savedCart ? JSON.parse(savedCart) : [];
+    
     if (savedHistory) setRecentlyViewed(JSON.parse(savedHistory));
-    if (savedCart) setCartItems(JSON.parse(savedCart));
+    setCartItems(parsedCart);
     setIsMounted(true);
   }, []);
 
@@ -51,6 +58,10 @@ export default function CartPage() {
       updated = [...cartItems, { ...product, qty: 1 }];
     }
     syncCart(updated);
+
+    // Trigger visual feedback
+    setAddedItemId(product.id);
+    setTimeout(() => setAddedItemId(null), 2000);
   };
 
   const updateQty = (id: number, delta: number) => {
@@ -178,7 +189,7 @@ export default function CartPage() {
                 </button>
               </div>
               <div className="mt-6"> 
-                <Link href="/products" className="flex items-center justify-center gap-2 text-gray-400 font-bold text-sm hover:text-[#3BB77E] transition-all">
+                <Link href="/shop" className="flex items-center justify-center gap-2 text-gray-400 font-bold text-sm hover:text-[#3BB77E] transition-all">
                   <ArrowLeft size={16} /> Continue Shopping
                 </Link>
               </div>
@@ -191,8 +202,11 @@ export default function CartPage() {
                <ShoppingBag size={64} className="hidden md:block" />
             </div>
             <h2 className="text-[#253D4E] text-xl md:text-3xl font-black mb-3 px-4 text-center">Your Cart is Currently Empty</h2>
-            <Link href="/products" className="bg-[#3BB77E] hover:bg-[#253D4E] text-white font-black px-8 md:px-10 py-3 md:py-4 rounded-2xl transition-all flex items-center gap-3 text-sm md:text-base">
-              <ArrowLeft size={18} /> Back to Shopping
+            <p className="text-gray-400 font-medium mb-8 text-center max-w-xs md:max-w-md px-4 text-sm md:text-base">
+              Looks like you haven't added any fresh groceries to your cart yet.
+            </p>
+            <Link href="/shop" className="bg-[#3BB77E] hover:bg-[#253D4E] text-white font-black px-8 md:px-10 py-3 md:py-4 rounded-2xl transition-all flex items-center gap-3 text-sm md:text-base">
+              <ArrowLeft size={18} /> Go to Shopping Page
             </Link>
           </div>
         )}
@@ -213,8 +227,15 @@ export default function CartPage() {
                   <h3 className="text-[#253D4E] font-extrabold text-xs md:text-sm h-8 md:h-10 line-clamp-2">{item.title}</h3>
                   <div className="flex items-center justify-between pt-3 md:pt-4 border-t border-gray-50">
                     <span className="text-[#3BB77E] font-black text-base md:text-lg">KES {parseFloat(item.price).toLocaleString()}</span>
-                    <button onClick={() => addToCart(item)} className="bg-[#3BB77E] text-white p-2.5 md:p-3 rounded-xl md:rounded-2xl hover:bg-[#42e064] transition-all">
-                      <Plus className="w-4 h-4 md:w-[18px] md:h-[18px]" />
+                    <button 
+                      onClick={() => addToCart(item)} 
+                      className={`${addedItemId === item.id ? 'bg-orange-500' : 'bg-[#3BB77E] hover:bg-[#42e064]'} text-white p-2.5 md:p-3 rounded-xl md:rounded-2xl transition-all shadow-md`}
+                    >
+                      {addedItemId === item.id ? (
+                        <Check className="w-4 h-4 md:w-[18px] md:h-[18px]" strokeWidth={3} />
+                      ) : (
+                        <Plus className="w-4 h-4 md:w-[18px] md:h-[18px]" strokeWidth={3} />
+                      )}
                     </button>
                   </div>
                 </div>
