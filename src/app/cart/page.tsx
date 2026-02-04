@@ -9,12 +9,14 @@ import {
   ArrowLeft, 
   ShoppingBag, 
   Star,
-  Check // Added for feedback
+  Check 
 } from "lucide-react";
 import { useQuery } from "@apollo/client/react";
+import { useRouter } from "next/navigation";
 import { GET_POPULAR_PRODUCTS } from "../../lib/queries";
 
 export default function CartPage() {
+  const router = useRouter();
   const { data: recentData, loading: recentLoading } = useQuery(GET_POPULAR_PRODUCTS, {
     variables: { maxPrice: 10000 }
   });
@@ -22,16 +24,12 @@ export default function CartPage() {
   const [cartItems, setCartItems] = useState<any[]>([]);
   const [recentlyViewed, setRecentlyViewed] = useState<any[]>([]);
   const [isMounted, setIsMounted] = useState(false);
-  
-  // State to track which item was just added for visual feedback
   const [addedItemId, setAddedItemId] = useState<number | null>(null);
 
   useEffect(() => {
     const savedHistory = localStorage.getItem("recentlyViewed");
     const savedCart = localStorage.getItem("cartItems");
-    
     const parsedCart = savedCart ? JSON.parse(savedCart) : [];
-    
     if (savedHistory) setRecentlyViewed(JSON.parse(savedHistory));
     setCartItems(parsedCart);
     setIsMounted(true);
@@ -47,23 +45,6 @@ export default function CartPage() {
   const SHIPPING_FEE = 150.00;
   const SERVICE_FEE = 50.00;
 
-  const addToCart = (product: any) => {
-    const existing = cartItems.find(item => item.id === product.id);
-    let updated;
-    if (existing) {
-      updated = cartItems.map(item => 
-        item.id === product.id ? { ...item, qty: item.qty + 1 } : item
-      );
-    } else {
-      updated = [...cartItems, { ...product, qty: 1 }];
-    }
-    syncCart(updated);
-
-    // Trigger visual feedback
-    setAddedItemId(product.id);
-    setTimeout(() => setAddedItemId(null), 2000);
-  };
-
   const updateQty = (id: number, delta: number) => {
     const updated = cartItems.map(item => 
       item.id === id ? { ...item, qty: Math.max(1, item.qty + delta) } : item
@@ -76,9 +57,48 @@ export default function CartPage() {
     syncCart(updated);
   };
 
+  const addToCart = (product: any) => {
+    const existing = cartItems.find(item => item.id === product.id);
+    let updated;
+    if (existing) {
+      updated = cartItems.map(item => 
+        item.id === product.id ? { ...item, qty: item.qty + 1 } : item
+      );
+    } else {
+      updated = [...cartItems, { ...product, qty: 1 }];
+    }
+    syncCart(updated);
+    setAddedItemId(product.id);
+    setTimeout(() => setAddedItemId(null), 2000);
+  };
+
   const subtotal = cartItems.reduce((acc, item) => acc + (parseFloat(item.price) * item.qty), 0);
   const vatAmount = subtotal * VAT_RATE;
   const totalAmount = subtotal + vatAmount + SHIPPING_FEE + SERVICE_FEE;
+
+  const handleCheckout = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (cartItems.length === 0) {
+      alert("Your cart is empty!");
+      return;
+    }
+    try {
+      const checkoutData = {
+        items: cartItems,
+        totals: {
+          subtotal: subtotal.toFixed(2),
+          vat: vatAmount.toFixed(2),
+          shipping: SHIPPING_FEE.toFixed(2),
+          service: SERVICE_FEE.toFixed(2),
+          total: totalAmount.toFixed(2)
+        }
+      };
+      localStorage.setItem("checkout_session", JSON.stringify(checkoutData));
+      router.push("/checkout");
+    } catch (error) {
+      console.error("Checkout Navigation Error:", error);
+    }
+  };
 
   if (!isMounted) return null;
 
@@ -116,7 +136,8 @@ export default function CartPage() {
                       <tr key={item.id} className="group hover:bg-[#3BB77E]/[0.02] transition-colors">
                         <td className="px-6 xl:px-10 py-8 flex items-center gap-4 xl:gap-8">
                           <div className="relative w-20 h-20 xl:w-28 xl:h-28 bg-[#F2F3F4] rounded-2xl overflow-hidden border border-gray-100 shrink-0">
-                            <Image src={item.images?.[0]?.image || "/placeholder.webp"} alt={item.title} fill className="object-contain p-2 xl:p-4" unoptimized />
+                            {/* FIX: Changed object-contain to object-cover */}
+                            <Image src={item.images?.[0]?.image || "/placeholder.webp"} alt={item.title} fill className="object-cover transition-transform duration-500 group-hover:scale-105" unoptimized />
                           </div>
                           <span className="block font-bold text-[#253D4E] text-base xl:text-lg leading-tight">{item.title}</span>
                         </td>
@@ -145,7 +166,8 @@ export default function CartPage() {
                       <Trash2 size={18} />
                     </button>
                     <div className="relative w-24 h-24 bg-[#F2F3F4] rounded-2xl overflow-hidden border border-gray-100 shrink-0">
-                      <Image src={item.images?.[0]?.image || "/placeholder.webp"} alt={item.title} fill className="object-contain p-2" unoptimized />
+                      {/* FIX: Changed object-contain to object-cover */}
+                      <Image src={item.images?.[0]?.image || "/placeholder.webp"} alt={item.title} fill className="object-cover" unoptimized />
                     </div>
                     <div className="flex flex-col justify-between py-1 flex-1">
                       <div>
@@ -184,7 +206,10 @@ export default function CartPage() {
                     <span className="text-[#3BB77E] text-xl md:text-2xl font-black">KES {totalAmount.toFixed(2)}</span>
                   </div>
                 </div>
-                <button className="w-full bg-[#3BB77E] hover:bg-[#253D4E] text-white font-black py-4 rounded-2xl shadow-lg transition-all flex items-center justify-center gap-3">
+                <button 
+                  onClick={handleCheckout}
+                  className="w-full bg-[#3BB77E] hover:bg-[#253D4E] text-white font-black py-4 rounded-2xl shadow-lg transition-all flex items-center justify-center gap-3"
+                >
                   Checkout <ShoppingBag size={18} />
                 </button>
               </div>
@@ -211,16 +236,20 @@ export default function CartPage() {
           </div>
         )}
 
-        {/* Recently Viewed Grid */}
         <div className="pt-12 md:pt-20 mt-12 md:mt-20 border-t border-gray-50">
           <h2 className="text-[#253D4E] text-xl md:text-2xl font-black mb-8 md:mb-10 flex items-center gap-3">
             <span className="w-2 h-7 bg-[#3BB77E] rounded-full" /> Recently Viewed
           </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-8">
+          
+          <div className="flex overflow-x-auto pb-6 gap-4 snap-x snap-mandatory no-scrollbar sm:grid sm:grid-cols-2 lg:grid-cols-4 md:gap-8 md:overflow-visible">
             {(recentlyViewed.length > 0 ? recentlyViewed : (recentData?.popularProducts || [])).slice(0, 4).map((item: any) => (
-              <div key={item.id} className="group border border-gray-50 rounded-[2rem] md:rounded-[2.5rem] p-4 md:p-6 bg-white relative overflow-hidden transition-all duration-300 hover:border-[#3BB77E] hover:shadow-[0_0_15px_rgba(59,183,126,0.15)]">
-                <div className="relative aspect-square mb-4 md:mb-6 bg-[#f9fbfb] rounded-2xl md:rounded-3xl overflow-hidden">
-                  <Image src={item.images?.[0]?.image || "/placeholder.webp"} alt={item.title} fill className="object-contain p-4 md:p-6 group-hover:scale-110 transition-transform duration-700" unoptimized />
+              <div 
+                key={item.id} 
+                className="min-w-[260px] sm:min-w-0 snap-start group border border-gray-50 rounded-[2rem] md:rounded-[2.5rem] p-4 md:p-6 bg-white relative overflow-hidden transition-all duration-300 hover:border-[#3BB77E] hover:shadow-[0_0_15px_rgba(59,183,126,0.15)]"
+              >
+                <div className="relative aspect-square mb-4 md:mb-6 bg-[#ffffff] rounded-2xl md:rounded-3xl overflow-hidden">
+                  {/* FIX: Changed object-contain to object-cover */}
+                  <Image src={item.images?.[0]?.image || "/placeholder.webp"} alt={item.title} fill className="object-cover group-hover:scale-110 transition-transform duration-700" unoptimized />
                 </div>
                 <div className="space-y-2 md:space-y-3">
                   <span className="text-[8px] md:text-[9px] text-[#3BB77E] bg-[#def9ec] px-3 py-1 rounded-full font-black uppercase tracking-widest">{item.category?.name || "Product"}</span>
@@ -244,6 +273,16 @@ export default function CartPage() {
           </div>
         </div>
       </div>
+      
+      <style jsx global>{`
+        .no-scrollbar::-webkit-scrollbar {
+          display: none;
+        }
+        .no-scrollbar {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+      `}</style>
     </div>
   );
 }

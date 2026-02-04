@@ -39,6 +39,25 @@ export const GET_SHOWCASE_ASSETS = gql`
   }
 `;
 
+// New Query: Specifically for the Navbar Search functionality
+export const SEARCH_PRODUCTS = gql`
+  query SearchProducts($searchTerm: String, $categoryName: String) {
+    allProducts(search: $searchTerm, categoryName: $categoryName) {
+      id
+      title
+      slug
+      totalStock
+      price
+      category {
+        name
+      }
+      images {
+        image
+      }
+    }
+  }
+`;
+
 export const GET_POPULAR_PRODUCTS = gql`
   query GetPopularProducts(
     $categoryName: String, 
@@ -47,6 +66,62 @@ export const GET_POPULAR_PRODUCTS = gql`
     $maxPrice: Float
   ) {
     popularProducts(
+      categoryName: $categoryName, 
+      tagName: $tagName, 
+      minPrice: $minPrice, 
+      maxPrice: $maxPrice
+    ) {
+      id
+      title
+      slug
+      price
+      oldPrice
+      isHotDeal
+      isBestSeller
+      soldCount
+      totalStock
+      category { name }
+      brand { name }
+      weight { value unit }
+      images {
+        id
+        image
+      }
+    }
+  }
+`;
+
+export const GET_DAILY_BEST_SELLS = gql`
+  query GetDailyBestSells {
+    dailyBestSells {
+      id
+      title
+      slug
+      price
+      oldPrice
+      isHotDeal
+      isBestSeller
+      soldCount
+      totalStock
+      category { name }
+      brand { name }
+      weight { value unit }
+      images {
+        id
+        image
+      }
+    }
+  }
+`;
+
+export const GET_ALL_PRODUCTS = gql`
+  query GetAllProducts(
+    $categoryName: String, 
+    $tagName: String, 
+    $minPrice: Float, 
+    $maxPrice: Float
+  ) {
+    allProducts(
       categoryName: $categoryName, 
       tagName: $tagName, 
       minPrice: $minPrice, 
@@ -102,16 +177,23 @@ export const GET_PRODUCT_DETAILS = gql`
       slug
       sku
       barcode
-      description
       price
       oldPrice
-      soldCount
+      description
+      ingredients
+      allergens
+      nutritionalInfo
+      storageInstructions
+      manufacturer
+      countryOfOrigin
+      productType
+      packagingType
       totalStock
+      maxOrder
+      requiresColdTransport
       category { name }
       brand { name }
-      weight { value unit }
       images {
-        id
         image
         altText
       }
@@ -119,7 +201,6 @@ export const GET_PRODUCT_DETAILS = gql`
     }
   }
 `;
-
 // --- 2. PRIVATE USER QUERIES (Filtered automatically by the backend) ---
 
 export const GET_USER_PROFILE = gql`

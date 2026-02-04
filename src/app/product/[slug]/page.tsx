@@ -15,11 +15,12 @@ import {
   ChevronUp,
   Info,
   User,
+  Check,
 } from "lucide-react";
 import Image from "next/image";
 import ProductSidebar from "../../../components/product/ProductSidebar";
 
-// Sub-component for the grid remains as per your structure
+// Sub-component updated with horizontal mobile scroll and "Added" feedback
 function PopularProductsGrid({ filters }: { filters: any }) {
   const { data, loading } = useQuery(GET_POPULAR_PRODUCTS, {
     variables: {
@@ -30,6 +31,7 @@ function PopularProductsGrid({ filters }: { filters: any }) {
     },
   });
 
+  const [addedItemId, setAddedItemId] = useState<string | null>(null);
   const products = data?.popularProducts || [];
 
   const addItemToCart = (item: any) => {
@@ -44,6 +46,9 @@ function PopularProductsGrid({ filters }: { filters: any }) {
 
     localStorage.setItem("cartItems", JSON.stringify(currentCart));
     window.dispatchEvent(new Event("cartUpdated"));
+
+    setAddedItemId(item.id);
+    setTimeout(() => setAddedItemId(null), 2000);
   };
 
   return (
@@ -54,30 +59,50 @@ function PopularProductsGrid({ filters }: { filters: any }) {
       </h2>
       
       {loading ? (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 animate-pulse">
-            {[...Array(4)].map((_, i) => <div key={i} className="h-72 bg-gray-50 rounded-2xl" />)}
+        <div className="flex overflow-x-auto gap-6 pb-4 no-scrollbar sm:grid sm:grid-cols-2 md:grid-cols-4 animate-pulse">
+            {[...Array(4)].map((_, i) => <div key={i} className="min-w-[280px] sm:min-w-0 h-72 bg-gray-50 rounded-2xl" />)}
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
+        <div className="flex overflow-x-auto gap-6 pb-6 snap-x snap-mandatory no-scrollbar sm:grid sm:grid-cols-2 md:grid-cols-4">
           {products.map((item: any) => (
-            <div key={item.id} className="border border-gray-100 rounded-2xl p-4 bg-white hover:border-[#3BB77E] hover:shadow-lg transition-all group">
+            <div key={item.id} className="min-w-[280px] sm:min-w-0 snap-start border border-gray-100 rounded-2xl p-4 bg-white hover:border-[#3BB77E] hover:shadow-lg transition-all group">
               <div className="relative aspect-square mb-4 bg-[#F8F8F8] rounded-xl overflow-hidden">
-                <Image src={item.images[0]?.image} alt={item.title} fill className="object-contain p-4 group-hover:scale-110 transition-transform" unoptimized />
+                <Image 
+                  src={item.images[0]?.image} 
+                  alt={item.title} 
+                  fill 
+                  className="object-cover group-hover:scale-110 transition-transform duration-500" 
+                  unoptimized 
+                />
               </div>
               <h3 className="text-[#253D4E] font-bold text-sm line-clamp-2 mb-2 h-10">{item.title}</h3>
               <div className="flex items-center justify-between">
                 <span className="text-[#3BB77E] font-bold">KES {parseFloat(item.price).toLocaleString()}</span>
                 <button 
                   onClick={() => addItemToCart(item)}
-                  className="bg-[#def9ec] text-[#3BB77E] p-2 rounded-lg hover:bg-[#3BB77E] hover:text-white transition-colors"
+                  className={`p-2 rounded-lg transition-all active:scale-90 ${
+                    addedItemId === item.id 
+                    ? "bg-orange-500 text-white" 
+                    : "bg-[#def9ec] text-[#3BB77E] hover:bg-[#3BB77E] hover:text-white"
+                  }`}
                 >
-                  <ShoppingCart size={16}/>
+                  {addedItemId === item.id ? <Check size={16} className="animate-in zoom-in" /> : <ShoppingCart size={16}/>}
                 </button>
               </div>
             </div>
           ))}
         </div>
       )}
+      
+      <style jsx global>{`
+        .no-scrollbar::-webkit-scrollbar {
+          display: none;
+        }
+        .no-scrollbar {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+      `}</style>
     </div>
   );
 }
@@ -93,7 +118,6 @@ export default function ProductDetailsPage({
   const [quantity, setQuantity] = useState(1);
   const [filters, setFilters] = useState({ category: null, weight: null, tag: null, maxPrice: 5000 });
   
-  // New state for "Added to Cart" feedback
   const [isAdded, setIsAdded] = useState(false);
 
   const { data, loading, error } = useQuery(GET_PRODUCT_DETAILS, {
@@ -127,7 +151,6 @@ export default function ProductDetailsPage({
     localStorage.setItem("cartItems", JSON.stringify(currentCart));
     window.dispatchEvent(new Event("cartUpdated"));
 
-    // Trigger visual feedback
     setIsAdded(true);
     setTimeout(() => setIsAdded(false), 2000);
   };
@@ -143,7 +166,23 @@ export default function ProductDetailsPage({
   const galleryImages = product.images || [];
   const nutritionText = product.nutritionalInfo || "";
 
-  const increment = () => quantity < (product.maxOrder || 12) && setQuantity((prev) => prev + 1);
+  /** * NEW PARSER: Handles "Nutrient; Amount; %DV" structure.
+   * Splits by semicolon and groups every 3 items into a row.
+   */
+  const nutritionArray = nutritionText.split(';').map(item => item.trim()).filter(item => item !== "");
+  const parsedNutrition = [];
+  for (let i = 0; i < nutritionArray.length; i += 3) {
+    if (nutritionArray[i]) {
+      parsedNutrition.push({
+        n: nutritionArray[i],
+        a: nutritionArray[i + 1] || "—",
+        p: nutritionArray[i + 2] || "—",
+        b: !nutritionArray[i].startsWith('–') // Sub-nutrients start with em-dash
+      });
+    }
+  }
+
+  const increment = () => quantity < (product.maxOrder || 100) && setQuantity((prev) => prev + 1);
   const decrement = () => quantity > 1 && setQuantity((prev) => prev - 1);
 
   return (
@@ -177,7 +216,7 @@ export default function ProductDetailsPage({
                     />
                   )}
                 </div>
-                <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+                <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
                   {galleryImages.map((img: any, idx: number) => (
                     <button key={idx} onClick={() => setSelectedImage(idx)} className={`w-16 h-16 border rounded-lg overflow-hidden shrink-0 transition-all ${selectedImage === idx ? "border-[#3BB77E]" : "border-gray-100 opacity-60"}`}>
                       <Image src={img.image} alt="Thumb" width={80} height={80} className="object-cover w-full h-full" unoptimized />
@@ -210,7 +249,6 @@ export default function ProductDetailsPage({
                     <input type="number" value={quantity} readOnly className="w-12 text-center font-bold text-sm text-[#253D4E] outline-none appearance-none m-0 bg-transparent" />
                     <button onClick={increment} className="w-10 h-full hover:bg-gray-50 text-gray-400 transition-colors">+</button>
                   </div>
-                  {/* Updated Button with "isAdded" conditional styling and content */}
                   <button 
                     onClick={addToCart} 
                     disabled={isAdded}
@@ -251,43 +289,86 @@ export default function ProductDetailsPage({
                       <h5 className="font-bold text-[#253D4E] uppercase text-xs tracking-widest flex items-center gap-2 font-bold"><Info size={14} /> Product Identity</h5>
                       <p><span className="text-gray-400 font-bold mr-2">SKU:</span>{product.sku}</p>
                       <p><span className="text-gray-400 font-bold mr-2">Barcode:</span>{product.barcode}</p>
-                      <p><span className="text-gray-400 font-bold mr-2">Type:</span>{product.productType}</p>
+                      <p><span className="text-gray-400 font-bold mr-2">Type:</span>{product.productType || "N/A"}</p>
                     </div>
                     <div className="space-y-4">
                       <h5 className="font-bold text-[#253D4E] uppercase text-xs tracking-widest flex items-center gap-2 font-bold"><Truck size={14} /> Commercial Information</h5>
                       <p><span className="text-gray-400 font-bold mr-2">Packaging:</span>{product.packagingType}</p>
-                      <p><span className="text-gray-400 font-bold mr-2">Max Order:</span>{Math.floor(product.maxOrder / 12)} Dozen to be delivered</p>
+                      <p><span className="text-gray-400 font-bold mr-2">Available Stock:</span>{product.totalStock} Units in warehouse</p>
                     </div>
                   </div>
 
                   <div className="space-y-8">
                     <h5 className="font-bold text-[#253D4E] uppercase text-xs tracking-widest flex items-center gap-2 font-bold"><Leaf size={14} /> Nutritional Content</h5>
-                    <p className="text-gray-600 italic leading-relaxed text-sm">Ingredients: {product.ingredients}.</p>
-                    <div className="border-y border-gray-50 py-10">
-                      <p className="text-[#3BB77E] font-medium text-base leading-relaxed whitespace-pre-wrap">{nutritionText || "Nutritional information pending batch laboratory verification."}</p>
+                    
+                    {/* Ingredients Table Structure */}
+                    <div className="overflow-hidden border border-gray-100 rounded-xl max-w-2xl mb-8">
+                      <div className="bg-[#f9fbfb] px-6 py-4 border-b border-gray-100">
+                        <span className="text-[#253D4E] font-bold text-sm uppercase tracking-wide">Ingredients Composition</span>
+                      </div>
+                      <div className="divide-y divide-gray-50">
+                        {product.ingredients ? (
+                          product.ingredients.split(',').map((ingredient: string, index: number) => (
+                            <div key={index} className={`grid grid-cols-12 px-6 py-3 text-sm ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}`}>
+                              <div className="col-span-1 text-[#3BB77E] font-bold">{index + 1}.</div>
+                              <div className="col-span-11 text-gray-600 italic capitalize">{ingredient.trim()}</div>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="px-6 py-4 text-sm text-gray-500 italic">No specific ingredients listed.</div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* DYNAMIC NUTRITION FACTS TABLE */}
+                    <div className="max-w-md border-2 border-black p-4 bg-white font-sans text-black shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)]">
+                      <h6 className="text-3xl font-black border-b-[8px] border-black pb-1 uppercase tracking-tighter">Nutrition Facts</h6>
+                      <div className="flex justify-between font-bold border-b-4 border-black py-1 text-xs uppercase tracking-wider">
+                        <span>Nutrient</span>
+                        <div className="flex gap-10">
+                          <span>Amount</span>
+                          <span>% DV*</span>
+                        </div>
+                      </div>
+                      
+                      <div className="divide-y-2 divide-black">
+                        {parsedNutrition.length > 0 ? parsedNutrition.map((row, idx) => (
+                          <div key={idx} className={`flex justify-between py-1.5 text-[14px] ${row.b ? "font-black" : "font-normal"}`}>
+                            <span className={!row.b ? "pl-4" : ""}>{row.n}</span>
+                            <div className="flex gap-4 min-w-[140px] justify-between">
+                              <span>{row.a}</span>
+                              <span className="w-12 text-right">{row.p}</span>
+                            </div>
+                          </div>
+                        )) : (
+                          <p className="py-4 text-xs italic text-gray-400">Nutritional data loading...</p>
+                        )}
+                      </div>
+
+                      <div className="border-t-[8px] border-black mt-1 pt-2 text-[10px] leading-tight italic">
+                        * The % Daily Value (DV) tells you how much a nutrient in a serving of food contributes to a daily diet. 2,000 calories a day is used for general nutrition advice.
+                      </div>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-12 text-sm">
                     <div className="space-y-4">
                       <h5 className="font-bold text-[#253D4E] uppercase text-xs tracking-widest flex items-center gap-2"><ShieldCheck size={14} /> Manufacturing</h5>
-                      <p><span className="text-gray-400 font-bold">Manufacturer:</span> {product.manufacturer}</p>
-                      <p><span className="text-gray-400 font-bold">Origin:</span> Made in {product.countryOfOrigin}</p>
+                      <p><span className="text-gray-400 font-bold">Manufacturer:</span> {product.manufacturer || "Utamu Wetu Farms"}</p>
+                      <p><span className="text-gray-400 font-bold">Origin:</span> Made in {product.countryOfOrigin || "Kenya"}</p>
                     </div>
                     <div className="space-y-4">
                       <h5 className="font-bold text-[#253D4E] uppercase text-xs tracking-widest flex items-center gap-2"><ThermometerSnowflake size={14} /> Storage</h5>
-                      <p className="text-gray-600 leading-relaxed italic">{product.storageInstructions}</p>
+                      <p className="text-gray-600 leading-relaxed italic">{product.storageInstructions || "Store in a cool, dry place."}</p>
                     </div>
                     <div className="space-y-4">
                       <h5 className="font-bold text-[#253D4E] uppercase text-xs tracking-widest flex items-center gap-2"><Truck size={14} /> Delivery</h5>
-                      <p className="text-blue-600 font-bold flex items-center gap-1">
-                        {product.requiresColdTransport && <Truck size={14} />}{" "}
+                      <p className={`${product.requiresColdTransport ? "text-blue-600" : "text-gray-600"} font-bold flex items-center gap-1`}>
                         {product.requiresColdTransport ? "Requires cold transport" : "Standard shipping"}
                       </p>
                     </div>
                   </div>
 
-                  {/* RESTORED FULL ALLERGEN MESSAGE */}
                   <div className="p-8 bg-red-50 border-2 border-red-100 rounded-[2rem] shadow-inner mt-12">
                     <h5 className="text-red-700 font-black uppercase text-xs tracking-[0.2em] mb-4 flex items-center gap-2">
                       <AlertTriangle size={18} className="animate-pulse" /> 9. Allergens & Safety Warnings

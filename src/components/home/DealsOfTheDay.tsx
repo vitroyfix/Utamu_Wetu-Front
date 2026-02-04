@@ -1,12 +1,15 @@
 "use client";
-import React from "react";
-import { Star, ShoppingCart } from "lucide-react";
+import React, { useState } from "react";
+import { Star, ShoppingCart, Check } from "lucide-react";
 import { useQuery } from "@apollo/client/react";
 import { GET_DEALS_OF_THE_DAY } from "../../lib/queries";
 import Image from "next/image";
+import Link from "next/link"; // Import Link for navigation
 
 export function DealsOfTheDay() {
   const { data, loading, error } = useQuery(GET_DEALS_OF_THE_DAY);
+  // State to track which item was just added
+  const [addedItemId, setAddedItemId] = useState<string | null>(null);
 
   const addToCart = (product: any) => {
     const currentCart = JSON.parse(localStorage.getItem("cartItems") || "[]");
@@ -21,13 +24,19 @@ export function DealsOfTheDay() {
     }
 
     localStorage.setItem("cartItems", JSON.stringify(currentCart));
-
     window.dispatchEvent(new Event("cartUpdated"));
+
+    // Visual feedback logic
+    setAddedItemId(product.id);
+    setTimeout(() => setAddedItemId(null), 2000);
   };
 
   if (error) return null;
 
-  const deals = data?.dealsOfTheDay || [];
+  // PRIORITY LOGIC: Sort deals by soldCount descending so top sellers appear first
+  const deals = data?.dealsOfTheDay 
+    ? [...data.dealsOfTheDay].sort((a, b) => (b.soldCount || 0) - (a.soldCount || 0)) 
+    : [];
 
   return (
     <section className="py-12 bg-white">
@@ -36,12 +45,13 @@ export function DealsOfTheDay() {
           Deals Of The Day
         </h2>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+        {/* Responsive Grid: Responsive columns for Desktop and horizontal scroll for Mobile */}
+        <div className="flex overflow-x-auto gap-4 pb-6 snap-x snap-mandatory no-scrollbar md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 md:gap-6 md:overflow-visible">
           {loading
             ? Array.from({ length: 4 }).map((_, i) => (
                 <div
                   key={i}
-                  className="animate-pulse border border-gray-100 rounded-2xl h-[480px] bg-gray-50"
+                  className="min-w-[280px] animate-pulse border border-gray-100 rounded-[2rem] h-[500px] bg-gray-50"
                 />
               ))
             : deals.map((product: any) => {
@@ -53,86 +63,101 @@ export function DealsOfTheDay() {
                 return (
                   <div
                     key={product.id}
-                    className="border border-gray-100 rounded-2xl p-4 relative group hover:border-[#3BB77E] hover:shadow-lg transition-all flex flex-col bg-white h-full min-h-[480px]"
+                    className="min-w-[280px] md:min-w-0 snap-start border border-gray-100 rounded-[2rem] p-4 relative group hover:border-[#3BB77E] hover:shadow-xl transition-all flex flex-col bg-white h-full min-h-[480px] md:min-h-[520px]"
                   >
                     {/* Badge */}
-                    <span className="absolute top-0 left-0 bg-[#FD6E6E] text-white text-[10px] px-4 py-1.5 rounded-tl-2xl rounded-br-2xl font-bold z-10">
+                    <span className="absolute top-0 left-0 bg-[#FD6E6E] text-white text-[10px] px-4 py-1.5 rounded-tl-[2rem] rounded-br-2xl font-bold z-10">
                       Hot Deal
                     </span>
 
-                    {/* Image Section */}
-                    <div className="h-56 flex items-center justify-center mb-4 mt-2 overflow-hidden bg-white rounded-lg relative">
-                      {imageUrl ? (
-                        <Image
-                          src={imageUrl}
-                          alt={product.title}
-                          width={200}
-                          height={200}
-                          className="object-contain group-hover:scale-105 transition-transform duration-700"
-                          unoptimized={true}
-                        />
-                      ) : (
-                        <div className="bg-gray-100 w-full h-full rounded-lg flex items-center justify-center text-gray-300">
-                          No Image
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex flex-col flex-grow">
-                      <span className="text-gray-400 text-[11px] mb-1">
+                    {/* Image Section - Wrapped in Link for navigation */}
+                    <Link href={`/product/${product.slug}`} className="cursor-pointer">
+                      <div className="relative w-full h-52 md:h-64 mb-4 mt-2 overflow-hidden rounded-2xl bg-[#f9fbfb]">
+                        {imageUrl ? (
+                          <Image
+                            src={imageUrl}
+                            alt={product.title}
+                            fill
+                            className="object-cover group-hover:scale-110 transition-transform duration-700"
+                            unoptimized={true}
+                          />
+                        ) : (
+                          <div className="bg-gray-100 w-full h-full flex items-center justify-center text-gray-300 font-bold uppercase text-[10px]">
+                            No Image
+                          </div>
+                        )}
+                      </div>
+                    </Link>
+
+                    <div className="flex flex-col flex-grow px-2">
+                      <span className="text-gray-400 text-[11px] mb-1 font-bold uppercase tracking-wider">
                         {product.category?.name || "General"}
                       </span>
 
-                      <h3 className="text-[#253D4E] font-bold text-[14px] leading-tight mb-2 h-10 line-clamp-2">
-                        {product.title}
-                      </h3>
+                      {/* Product Title - Wrapped in Link for navigation */}
+                      <Link href={`/product/${product.slug}`}>
+                        <h3 className="text-[#253D4E] font-bold text-[15px] leading-tight mb-2 h-10 line-clamp-2 hover:text-[#3BB77E] transition-colors cursor-pointer">
+                          {product.title}
+                        </h3>
+                      </Link>
 
-                      <div className="flex items-center gap-1 mb-1">
+                      <div className="flex items-center gap-1 mb-2">
                         <Star
                           size={12}
                           className="fill-[#FDC040] text-[#FDC040]"
                         />
-                        <span className="text-gray-400 text-xs">(4.0)</span>
+                        <span className="text-gray-400 text-xs font-medium">(4.0)</span>
                       </div>
 
-                      <div className="text-xs mb-3">
+                      <div className="text-xs mb-4">
                         <span className="text-gray-400">By </span>
-                        <span className="text-[#3BB77E] hover:underline cursor-pointer font-medium">
+                        <span className="text-[#3BB77E] hover:underline cursor-pointer font-bold">
                           {product.brand?.name || "Utamu Wetu"}
                         </span>
                       </div>
 
-                      {/* 3. Progress Bar - Now using Real Data */}
+                      {/* Progress Bar using Backend Data */}
                       <div className="mb-4">
-                        <div className="w-full bg-gray-100 h-1.5 rounded-full mb-1">
+                        <div className="w-full bg-gray-100 h-2 rounded-full mb-1 overflow-hidden">
                           <div
                             className="bg-[#3BB77E] h-full rounded-full transition-all duration-1000"
                             style={{ width: `${progress}%` }}
                           ></div>
                         </div>
-                        <p className="text-gray-500 text-[10px] font-medium">
+                        <p className="text-gray-500 text-[10px] font-bold">
                           Sold: {soldCount}/{totalStock}
                         </p>
                       </div>
 
-                      <div className="flex items-center justify-between mt-auto">
+                      <div className="flex items-center justify-between mt-auto pt-2 border-t border-gray-50">
                         <div className="flex flex-col">
-                          <span className="text-[#3BB77E] font-bold text-lg">
+                          <span className="text-[#3BB77E] font-black text-lg">
                             KES {parseFloat(product.price).toLocaleString()}
                           </span>
                           {product.oldPrice && (
-                            <span className="text-gray-400 text-xs line-through">
-                              KES{" "}
-                              {parseFloat(product.oldPrice).toLocaleString()}
+                            <span className="text-gray-400 text-[11px] line-through font-bold">
+                              KES {parseFloat(product.oldPrice).toLocaleString()}
                             </span>
                           )}
                         </div>
-                        {/* ATTACHED ADD TO CART HANDLER HERE */}
+                        
                         <button
                           onClick={() => addToCart(product)}
-                          className="bg-[#DEF9EC] text-[#3BB77E] hover:bg-[#3BB77E] hover:text-white px-4 py-2 rounded-md text-sm font-bold flex items-center gap-1 transition-all active:scale-95"
+                          className={`${
+                            addedItemId === product.id 
+                            ? "bg-orange-500 text-white shadow-orange-200" 
+                            : "bg-[#DEF9EC] text-[#3BB77E] hover:bg-[#3BB77E] hover:text-white"
+                          } px-4 py-2.5 rounded-xl text-xs font-black flex items-center gap-2 transition-all active:scale-90 shadow-sm`}
                         >
-                          <ShoppingCart size={14} />
-                          Add
+                          {addedItemId === product.id ? (
+                            <>
+                              <Check size={16} className="animate-in zoom-in" /> Added
+                            </>
+                          ) : (
+                            <>
+                              <ShoppingCart size={16} /> Add
+                            </>
+                          )}
                         </button>
                       </div>
                     </div>
@@ -141,6 +166,16 @@ export function DealsOfTheDay() {
               })}
         </div>
       </div>
+
+      <style jsx global>{`
+        .no-scrollbar::-webkit-scrollbar {
+          display: none;
+        }
+        .no-scrollbar {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+      `}</style>
     </section>
   );
 }

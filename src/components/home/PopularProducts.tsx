@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Star, ShoppingCart } from "lucide-react";
+import { Star, ShoppingCart, Check } from "lucide-react";
 import { useQuery } from "@apollo/client/react";
 import { GET_CATEGORIES } from "../../lib/queries";
 import { usePopularProducts } from "../../hooks/useStore";
@@ -11,12 +11,15 @@ import Link from "next/link";
 export default function PopularProducts() {
   const [activeCategory, setActiveCategory] = useState("All");
   const [mounted, setMounted] = useState(false);
+  // Track specifically which item was added for visual feedback
+  const [addedItemId, setAddedItemId] = useState<string | null>(null);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
   const { data: catData, loading: catLoading } = useQuery(GET_CATEGORIES);
+
   const { products, loading, error } = usePopularProducts(activeCategory);
 
   const addToCart = (product: any) => {
@@ -32,13 +35,15 @@ export default function PopularProducts() {
     }
 
     localStorage.setItem("cartItems", JSON.stringify(currentCart));
-
     window.dispatchEvent(new Event("cartUpdated"));
+
+    // Provide visual feedback
+    setAddedItemId(product.id);
+    setTimeout(() => setAddedItemId(null), 2000);
   };
-  // -------------------------
 
   useEffect(() => {
-    if (products) console.log("Current Products Data:", products);
+    if (products) console.log("Current Popular Products:", products);
   }, [products]);
 
   if (!mounted) return <div className="min-h-screen bg-white" />;
@@ -59,10 +64,10 @@ export default function PopularProducts() {
           <h2 className="text-[#253D4E] text-2xl md:text-3xl font-bold">
             Popular Products
           </h2>
-          <div className="flex flex-wrap gap-4 md:gap-6">
+          <div className="flex overflow-x-auto no-scrollbar gap-4 md:gap-6 pb-2 md:pb-0">
             <button
               onClick={() => setActiveCategory("All")}
-              className={`text-sm font-bold transition-colors ${
+              className={`text-sm font-bold transition-colors whitespace-nowrap ${
                 activeCategory === "All"
                   ? "text-[#3BB77E]"
                   : "text-[#253D4E] hover:text-[#3BB77E]"
@@ -76,7 +81,7 @@ export default function PopularProducts() {
                 <button
                   key={cat.id}
                   onClick={() => setActiveCategory(cat.name)}
-                  className={`text-sm font-bold transition-colors ${
+                  className={`text-sm font-bold transition-colors whitespace-nowrap ${
                     activeCategory === cat.name
                       ? "text-[#3BB77E]"
                       : "text-[#253D4E] hover:text-[#3BB77E]"
@@ -89,12 +94,12 @@ export default function PopularProducts() {
         </div>
 
         {/* 2. Product Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+        <div className="flex overflow-x-auto no-scrollbar pb-6 gap-4 snap-x snap-mandatory sm:grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 md:gap-6 md:overflow-visible">
           {loading
             ? Array.from({ length: 10 }).map((_, i) => (
                 <div
                   key={i}
-                  className="animate-pulse border border-gray-100 rounded-2xl p-4 h-[350px] bg-gray-50"
+                  className="min-w-[200px] animate-pulse border border-gray-100 rounded-2xl p-4 h-[320px] bg-gray-50"
                 />
               ))
             : products.map((product: any) => {
@@ -104,29 +109,29 @@ export default function PopularProducts() {
                 return (
                   <div
                     key={product.id}
-                    className="border border-gray-100 rounded-2xl p-4 relative group hover:border-[#3BB77E] hover:shadow-lg transition-all flex flex-col bg-white"
+                    className="min-w-[200px] sm:min-w-0 snap-start border border-gray-100 rounded-2xl p-3 md:p-4 relative group hover:border-[#3BB77E] hover:shadow-lg transition-all flex flex-col bg-white"
                   >
                     {product.isHotDeal && (
-                      <span className="absolute top-0 left-0 bg-[#FD6E6E] text-white text-[10px] px-4 py-1.5 rounded-tl-2xl rounded-br-2xl font-bold z-10">
+                      <span className="absolute top-0 left-0 bg-[#FD6E6E] text-white text-[9px] px-3 py-1 rounded-tl-2xl rounded-br-2xl font-bold z-10">
                         Hot
                       </span>
                     )}
 
                     <Link href={productLink} className="cursor-pointer">
-                      <div className="h-44 flex items-center justify-center mb-4 mt-2 overflow-hidden bg-white-50 rounded-lg relative">
+                      {/* FIX: Set container to relative with specific height and overflow-hidden */}
+                      <div className="h-32 md:h-44 w-full relative mb-3 mt-2 overflow-hidden bg-white rounded-lg">
                         {imageUrl ? (
                           <Image
                             src={imageUrl}
                             alt={product.title}
-                            width={150}
-                            height={150}
-                            className="object-contain group-hover:scale-105 transition-transform duration-300"
+                            fill
+                            className="object-cover group-hover:scale-105 transition-transform duration-300"
                             unoptimized={true}
                           />
                         ) : (
-                          <div className="flex flex-col items-center justify-center text-gray-400">
-                            <span className="text-3xl mb-1">N/A</span>
-                            <span className="text-[10px] uppercase font-bold">
+                          <div className="flex flex-col items-center justify-center text-gray-400 h-full w-full">
+                            <span className="text-2xl mb-1">N/A</span>
+                            <span className="text-[9px] uppercase font-bold">
                               No Image
                             </span>
                           </div>
@@ -135,31 +140,31 @@ export default function PopularProducts() {
                     </Link>
 
                     <div className="flex flex-col flex-grow">
-                      <span className="text-gray-400 text-[11px] mb-1">
+                      <span className="text-gray-400 text-[10px] mb-1">
                         {product.category?.name || "General"}
                       </span>
 
                       <Link href={productLink}>
-                        <h3 className="text-[#253D4E] font-bold text-[14px] leading-tight mb-2 h-10 line-clamp-2 hover:text-[#3BB77E] transition-colors cursor-pointer">
+                        <h3 className="text-[#253D4E] font-bold text-[13px] md:text-[14px] leading-tight mb-2 h-8 md:h-10 line-clamp-2 hover:text-[#3BB77E] transition-colors cursor-pointer">
                           {product.title}
                         </h3>
                       </Link>
 
                       <div className="flex items-center gap-1 mb-1">
                         <Star
-                          size={12}
+                          size={10}
                           className="fill-[#FDC040] text-[#FDC040]"
                         />
-                        <span className="text-gray-400 text-xs">(4.0)</span>
+                        <span className="text-gray-400 text-[10px]">(4.0)</span>
                         {product.weight && (
-                          <span className="text-gray-500 text-[10px] ml-2 font-medium bg-gray-100 px-1 rounded">
+                          <span className="text-gray-500 text-[9px] ml-1.5 font-medium bg-gray-100 px-1 rounded">
                             {product.weight.value}
                             {product.weight.unit}
                           </span>
                         )}
                       </div>
 
-                      <div className="text-xs mb-4">
+                      <div className="text-[10px] mb-3">
                         <span className="text-gray-400">By </span>
                         <span className="text-[#3BB77E] hover:underline cursor-pointer">
                           {product.brand?.name || "Utamu Wetu"}
@@ -168,23 +173,34 @@ export default function PopularProducts() {
 
                       <div className="flex items-center justify-between mt-auto">
                         <div className="flex flex-col">
-                          <span className="text-[#3BB77E] font-bold text-lg">
+                          <span className="text-[#3BB77E] font-bold text-base md:text-lg">
                             KES {parseFloat(product.price).toLocaleString()}
                           </span>
                           {product.oldPrice && (
-                            <span className="text-gray-400 text-xs line-through">
+                            <span className="text-gray-400 text-[10px] line-through">
                               KES{" "}
                               {parseFloat(product.oldPrice).toLocaleString()}
                             </span>
                           )}
                         </div>
-                        {/* ATTACHED ADD TO CART HANDLER HERE */}
+
                         <button
                           onClick={() => addToCart(product)}
-                          className="bg-[#DEF9EC] text-[#3BB77E] hover:bg-[#3BB77E] hover:text-white px-3 py-1.5 rounded-md text-sm font-bold flex items-center gap-1 transition-all active:scale-95"
+                          className={`px-2 md:px-3 py-1.5 rounded-md text-[11px] md:text-sm font-bold flex items-center gap-1 transition-all active:scale-95 ${
+                            addedItemId === product.id
+                              ? "bg-orange-500 text-white"
+                              : "bg-[#DEF9EC] text-[#3BB77E] hover:bg-[#3BB77E] hover:text-white"
+                          }`}
                         >
-                          <ShoppingCart size={14} />
-                          Add
+                          {addedItemId === product.id ? (
+                            <>
+                              <Check size={14} /> Added
+                            </>
+                          ) : (
+                            <>
+                              <ShoppingCart size={14} /> Add
+                            </>
+                          )}
                         </button>
                       </div>
                     </div>
@@ -193,6 +209,16 @@ export default function PopularProducts() {
               })}
         </div>
       </div>
+
+      <style jsx global>{`
+        .no-scrollbar::-webkit-scrollbar {
+          display: none;
+        }
+        .no-scrollbar {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+      `}</style>
     </section>
   );
 }

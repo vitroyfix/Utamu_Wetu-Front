@@ -10,14 +10,19 @@ import {
   Phone,
   Menu,
   X,
+  ArrowRight,
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { useState, useEffect, useRef } from "react";
-import { useQuery } from "@apollo/client/react";
-import { GET_CATEGORIES, GET_POPULAR_PRODUCTS } from "../../lib/queries";
+import { useRouter } from "next/navigation";
+import { useQuery, useLazyQuery } from "@apollo/client/react";
+import { GET_CATEGORIES, SEARCH_PRODUCTS } from "../../lib/queries";
+// Redirection logic is imported but not used automatically during typing to prevent auto-delete/redirect
+import { handleSmartSearch } from "../../lib/searchUtils";
 
 export default function Navbar() {
+  const router = useRouter();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [mobileDropdown, setMobileDropdown] = useState<string | null>(null);
   const [cartCount, setCartCount] = useState(0);
@@ -28,15 +33,41 @@ export default function Navbar() {
   const [searchQuery, setSearchQuery] = useState("");
   const searchRef = useRef<HTMLDivElement>(null);
 
+  // API Hooks
   const { data: catData } = useQuery(GET_CATEGORIES);
-  const { data: prodData } = useQuery(GET_POPULAR_PRODUCTS);
+  
+  // Use LazyQuery for efficient backend searching
+  const [executeSearch, { data: searchData, loading: searchLoading }] = useLazyQuery(SEARCH_PRODUCTS);
 
   const categories = catData?.allCategories || [];
-  const allProducts = prodData?.popularProducts || [];
+  const searchResults = searchData?.allProducts || [];
 
-  const searchResults = searchQuery 
-    ? allProducts.filter((p: any) => p.title.toLowerCase().includes(searchQuery.toLowerCase()))
-    : [];
+  // Helper to highlight matching text like in the Carrefour image
+  const highlightMatch = (text: string, query: string) => {
+    if (!query) return text;
+    const parts = text.split(new RegExp(`(${query})`, "gi"));
+    return parts.map((part, i) => 
+      part.toLowerCase() === query.toLowerCase() ? (
+        <span key={i} className="font-normal text-gray-500">{part}</span>
+      ) : (
+        <span key={i} className="font-bold text-[#253D4E]">{part}</span>
+      )
+    );
+  };
+
+  // FIXED SEARCH LOGIC: Removed automatic redirection to prevent autodelete/jumping
+  useEffect(() => {
+    const query = searchQuery.trim();
+    
+    if (query.length > 1) {
+      // Execute only the backend search to display results in the dropdown
+      // This ensures you stay on the current page while searching
+      executeSearch({ 
+        variables: { searchTerm: query },
+        fetchPolicy: "network-only" 
+      });
+    }
+  }, [searchQuery, executeSearch]);
 
   useEffect(() => {
     const updateCount = () => {
@@ -54,12 +85,11 @@ export default function Navbar() {
     return () => window.removeEventListener("cartUpdated", updateCount);
   }, []);
 
-  // Close search when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
-        setIsSearchOpen(false);
         setSearchQuery("");
+        if (window.innerWidth < 1024) setIsSearchOpen(false);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
@@ -68,9 +98,9 @@ export default function Navbar() {
 
   const navLinks = [
     { name: "Home", href: "/" },
-    { name: "Category", href: "/categories", hasDropdown: true },
-    { name: "Products", href: "/products", hasDropdown: true },
-    { name: "Pages", href: "/pages", hasDropdown: true },
+    { name: "Category", href: "/shop", hasDropdown: true },
+    { name: "Products", href: "/shop", hasDropdown: true },
+    { name: "Pages", href: "/shop", hasDropdown: true },
     { name: "Blog", href: "/blog", hasDropdown: true },
     { name: "Elements", href: "/elements", hasDropdown: true },
   ];
@@ -86,7 +116,6 @@ export default function Navbar() {
   const createdPages = [
     { name: "Shopping Page", href: "/shop" },
     { name: "Your Cart", href: "/cart" },
-    { name: "Product Details", href: "/shop" },
     { name: "Checkout", href: "/checkout" },
   ];
 
@@ -104,34 +133,37 @@ export default function Navbar() {
     <header className="w-full bg-white font-sans border-b border-gray-100 sticky top-0 z-[999]">
       {/* 1. Top Utility Bar */}
       <div className="hidden lg:block border-b border-gray-100 relative z-[1010]">
-        <div className="container mx-auto px-100 flex justify-between items-center py-3">
-          <div className="flex items-center gap-8 text-[14px] font-medium text-gray-700">
+        <div className="container mx-auto px-4 grid grid-cols-3 items-center py-3">
+          <div /> 
+
+          <div className="flex items-center justify-center gap-8 text-[14px] font-medium text-gray-700">
             {navLinks.map((link) => (
               <div 
                 key={link.name} 
-                className="relative group"
+                className="relative group h-full py-1"
                 onMouseEnter={() => link.hasDropdown && setActiveDropdown(link.name)}
                 onMouseLeave={() => setActiveDropdown(null)}
               >
-                <Link href={link.href} className="flex items-center gap-1 transition-all duration-300 hover:text-[#3BB77E] hover:scale-110 active:scale-95 transform origin-left">
+                {/* RESTORED: Standard Link for redirection, Chevron for visual indicator */}
+                <Link href={link.href} className="flex items-center gap-1 transition-all duration-300 hover:text-[#3BB77E] hover:scale-110 active:scale-95 transform origin-center">
                   {link.name} {link.hasDropdown && <ChevronDown size={14} />}
                 </Link>
 
                 {link.hasDropdown && activeDropdown === link.name && (
-                  <div className="absolute top-full left-0 pt-2 w-64 z-[1100]">
+                  <div className="absolute top-full left-1/2 -translate-x-1/2 pt-2 w-64 z-[1100]">
                     <div className="bg-white border border-gray-100 shadow-xl rounded-lg py-4 transition-all duration-200">
                       {link.name === "Category" && categories.map((cat: any) => (
-                        <Link key={cat.id} href={`/shop?category=${cat.name}`} className="block px-8 py-3 text-gray-700 hover:text-[#3BB77E] hover:bg-gray-50 font-medium text-sm">
+                        <Link key={cat.id} href={`/shop?category=${cat.name}`} onClick={() => setActiveDropdown(null)} className="block px-8 py-3 text-gray-700 hover:text-[#3BB77E] hover:bg-gray-50 font-medium text-sm">
                           {cat.name}
                         </Link>
                       ))}
                       {link.name === "Products" && productSections.map((section) => (
-                        <Link key={section.name} href={section.href} className="block px-8 py-3 text-gray-700 hover:text-[#3BB77E] hover:bg-gray-50 font-medium text-sm">
+                        <Link key={section.name} href={section.href} onClick={() => setActiveDropdown(null)} className="block px-8 py-3 text-gray-700 hover:text-[#3BB77E] hover:bg-gray-50 font-medium text-sm">
                           {section.name}
                         </Link>
                       ))}
                       {link.name === "Pages" && createdPages.map((page) => (
-                        <Link key={page.name} href={page.href} className="block px-8 py-3 text-gray-700 hover:text-[#3BB77E] hover:bg-gray-50 font-medium text-sm">
+                        <Link key={page.name} href={page.href} onClick={() => setActiveDropdown(null)} className="block px-8 py-3 text-gray-700 hover:text-[#3BB77E] hover:bg-gray-50 font-medium text-sm">
                           {page.name}
                         </Link>
                       ))}
@@ -141,7 +173,8 @@ export default function Navbar() {
               </div>
             ))}
           </div>
-          <div className="flex items-center gap-1 ml-[10] mr-[0]n text-[14px] text-gray-700">
+
+          <div className="flex items-center justify-end gap-1 text-[14px] text-gray-700">
             <Phone size={16} className="text-[#3BB77E]" />
             <span>+254xxxxxxxxxxxx</span>
           </div>
@@ -149,7 +182,7 @@ export default function Navbar() {
       </div>
 
       {/* 2. Main Header Section */}
-      <div className="container mx-auto px-4 py-4 flex items-center justify-between gap-2 md:gap-6 h-20 relative z-[1001] bg-white">
+      <div className="container mx-auto px-4 py-4 flex items-center justify-between gap-4 h-20 relative z-[1001] bg-white">
         <div className="flex items-center gap-1 shrink-0">
           <button
             onClick={handleToggle}
@@ -170,22 +203,76 @@ export default function Navbar() {
           </Link>
         </div>
 
-        {/* Action Icons & Search Toggle */}
-        <div className="flex items-center gap-3 md:gap-8 shrink-0">
-          <button
-            onClick={() => setIsSearchOpen(!isSearchOpen)}
-            className="bg-[#ffffff] hover:bg-red-600 active:bg-red-700 transition-colors h-9 w-9 md:h-11 md:w-11 rounded-[5px] text-black flex items-center justify-center"
-          >
-            {isSearchOpen ? <X size={18} /> : <Search size={16} className="md:w-5 md:h-5" />}
-          </button>
+        {/* Updated Desktop Search Bar (Carrefour Style) */}
+        <div className="hidden lg:flex flex-1 max-w-xl relative" ref={searchRef}>
+          <div className="flex w-full items-center border-2 border-[#BCE3C9] rounded-[5px] h-11 overflow-hidden focus-within:border-[#3BB77E] transition-all bg-[#F8F9FA]">
+             <div className="pl-3 text-gray-400">
+               <Search size={18} />
+             </div>
+            <input
+              type="text"
+              placeholder="Search for products..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="flex-1 px-3 text-sm outline-none bg-transparent font-medium"
+            />
+            {searchQuery && (
+              <button onClick={() => setSearchQuery("")} className="pr-3 text-gray-400 hover:text-gray-600">
+                <X size={16} />
+              </button>
+            )}
+          </div>
+          
+          {searchQuery && (
+            <div className="absolute top-full left-0 w-full mt-1 bg-white border border-gray-100 shadow-2xl rounded-lg overflow-hidden z-[2005] animate-in fade-in slide-in-from-top-1">
+              <div className="py-2 max-h-[400px] overflow-y-auto">
+                {searchResults.length > 0 ? (
+                  searchResults.map((p: any) => (
+                    <Link 
+                      key={p.id} 
+                      href={`/product/${p.slug}`} 
+                      onClick={() => setSearchQuery("")} 
+                      className="flex items-center justify-between px-4 py-3 hover:bg-blue-50/50 group border-b border-gray-50 last:border-0"
+                    >
+                      <div className="flex items-center gap-4">
+                        <Search size={16} className="text-gray-300" />
+                        <span className="text-sm">
+                          {highlightMatch(p.title, searchQuery)}
+                        </span>
+                      </div>
+                      <ArrowRight size={16} className="text-blue-500 opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all" />
+                    </Link>
+                  ))
+                ) : !searchLoading && (
+                  <div className="p-8 text-center">
+                     <p className="text-gray-400 text-sm font-medium italic">No matches found for "{searchQuery}"</p>
+                  </div>
+                )}
+              </div>
+              
+              {/* Footer action like "See all results" */}
+              {searchResults.length > 0 && (
+                <button 
+                  onClick={() => {router.push(`/shop?search=${searchQuery}`); setSearchQuery("");}}
+                  className="w-full py-3 bg-gray-50 text-[#3BB77E] text-xs font-black uppercase tracking-wider hover:bg-[#def9ec] transition-colors border-t border-gray-100"
+                >
+                  View all results for "{searchQuery}"
+                </button>
+              )}
+            </div>
+          )}
+        </div>
 
+        <div className="flex items-center gap-3 md:gap-8 shrink-0">
+          <button onClick={() => setIsSearchOpen(!isSearchOpen)} className="lg:hidden bg-[#ffffff] h-9 w-9 rounded-[5px] text-black flex items-center justify-center border border-gray-100 transition-colors hover:bg-gray-50">
+            {isSearchOpen ? <X size={18} /> : <Search size={16} />}
+          </button>
           <Link href="/wishlist" className="flex items-center gap-1 group transition-all duration-300 hover:scale-110">
             <div className="relative">
               <Heart size={18} className="text-gray-700 group-hover:text-[#3BB77E] md:w-6 md:h-6" />
               <span className="absolute -top-1.5 -right-1.5 bg-[#3BB77E] text-white text-[7px] md:text-[10px] w-3.5 h-3.5 md:w-4 md:h-4 rounded-full flex items-center justify-center font-bold border border-white">0</span>
             </div>
           </Link>
-
           <Link href="/cart" className="flex items-center gap-1 group transition-all duration-300 hover:scale-110">
             <div className="relative">
               <ShoppingCart size={18} className="text-gray-700 group-hover:text-[#3BB77E] md:w-6 md:h-6" />
@@ -196,44 +283,32 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* --- SEARCH DROP DOWN PANEL --- */}
+      {/* Mobile Search Dropdown */}
       {isSearchOpen && (
-        <div ref={searchRef} className="absolute top-20 left-0 w-full bg-white border-b border-gray-100 shadow-xl z-[2005] animate-in slide-in-from-top-4 duration-300 p-4">
-          <div className="container mx-auto">
-            <div className="flex items-center border-2 border-[#BCE3C9] rounded-[5px] h-12 overflow-hidden focus-within:border-[#3BB77E]">
-              <input
-                autoFocus
-                type="text"
-                placeholder="Search for organic groceries..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="flex-1 px-4 text-sm outline-none bg-transparent"
-              />
-            </div>
-            
-            {searchQuery && (
-              <div className="mt-4 max-h-60 overflow-y-auto bg-gray-50 rounded-xl p-4">
+        <div className="lg:hidden absolute top-20 left-0 w-full bg-white border-b border-gray-100 shadow-xl z-[2005] p-4 animate-in slide-in-from-top-4">
+          <div className="flex items-center border-2 border-[#BCE3C9] rounded-[5px] h-12 overflow-hidden focus-within:border-[#3BB77E]">
+            <input autoFocus type="text" placeholder="Search groceries..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="flex-1 px-4 text-sm outline-none bg-transparent" />
+          </div>
+          {searchQuery && (
+             <div className="mt-4 max-h-60 overflow-y-auto bg-gray-50 rounded-xl p-4">
                 {searchResults.length > 0 ? (
                   searchResults.map((p: any) => (
-                    <Link key={p.id} href={`/product/${p.slug}`} onClick={() => setIsSearchOpen(false)} className="flex justify-between items-center p-3 hover:bg-white rounded-lg mb-2 shadow-sm transition-all">
+                    <Link key={p.id} href={`/product/${p.slug}`} onClick={() => {setIsSearchOpen(false); setSearchQuery("");}} className="flex justify-between items-center p-3 hover:bg-white rounded-lg mb-2 shadow-sm transition-all">
                       <span className="font-bold text-[#253D4E] text-sm">{p.title}</span>
-                      {p.totalStock > 0 ? (
-                        <span className="text-[#3BB77E] text-[10px] font-bold bg-[#def9ec] px-2 py-1 rounded-full uppercase">In Stock</span>
-                      ) : (
-                        <span className="text-red-400 text-[10px] font-bold bg-red-50 px-2 py-1 rounded-full uppercase">Finished</span>
-                      )}
+                      <span className={`text-[10px] font-bold px-2 py-1 rounded-full uppercase ${p.totalStock > 0 ? 'text-[#3BB77E] bg-[#def9ec]' : 'text-red-400 bg-red-50'}`}>
+                        {p.totalStock > 0 ? 'In Stock' : 'Finished'}
+                      </span>
                     </Link>
                   ))
-                ) : (
-                  <p className="text-center text-gray-400 text-xs py-4 font-bold">We do not have that product.</p>
+                ) : !searchLoading && (
+                  <p className="text-center text-gray-400 text-xs py-4 font-bold uppercase">No results</p>
                 )}
-              </div>
-            )}
-          </div>
+             </div>
+          )}
         </div>
       )}
 
-      {/* 3. Mobile Menu Part - Elevated Z-Index */}
+      {/* Mobile Menu */}
       <div className={`lg:hidden fixed inset-0 top-20 w-full bg-white shadow-2xl z-[2000] transition-all duration-500 ease-in-out ${isMobileMenuOpen ? "translate-x-0 opacity-100" : "-translate-x-full opacity-0"}`}>
         <div className="flex flex-col p-6 space-y-4 overflow-y-auto h-full pb-32">
           {navLinks.map((link) => (
@@ -247,7 +322,7 @@ export default function Navbar() {
                 )}
               </div>
               {link.hasDropdown && mobileDropdown === link.name && (
-                <div className="bg-gray-50 rounded-xl p-4 mt-2 space-y-4 animate-in slide-in-from-top-2">
+                <div className="bg-gray-50 rounded-xl p-4 mt-2 space-y-4">
                   {link.name === "Category" && categories.map((cat: any) => (
                     <Link key={cat.id} href={`/shop?category=${cat.name}`} onClick={() => setIsMobileMenuOpen(false)} className="block text-gray-600 font-medium ml-2 text-sm">{cat.name}</Link>
                   ))}
