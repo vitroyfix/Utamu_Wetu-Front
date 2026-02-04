@@ -55,7 +55,6 @@ export default function Navbar() {
   useEffect(() => {
     const query = searchQuery.trim();
     if (query.length > 1) {
-      // FIX: executeSearch options only accept variables, context, etc.
       executeSearch({ 
         variables: { searchTerm: query }
       });
@@ -124,6 +123,7 @@ export default function Navbar() {
 
   return (
     <header className="w-full bg-white font-sans border-b border-gray-100 sticky top-0 z-[999]">
+      {/* 1. Top Utility Bar */}
       <div className="hidden lg:block border-b border-gray-100 relative z-[1010]">
         <div className="container mx-auto px-4 grid grid-cols-3 items-center py-3">
           <div /> 
@@ -172,6 +172,7 @@ export default function Navbar() {
         </div>
       </div>
 
+      {/* 2. Main Header Section */}
       <div className="container mx-auto px-4 py-4 flex items-center justify-between gap-4 h-20 relative z-[1001] bg-white">
         <div className="flex items-center gap-1 shrink-0">
           <button
@@ -238,6 +239,7 @@ export default function Navbar() {
         </div>
 
         <div className="flex items-center gap-3 md:gap-8 shrink-0">
+          {/* MOBILE SEARCH TOGGLE */}
           <button onClick={() => setIsSearchOpen(!isSearchOpen)} className="lg:hidden bg-[#ffffff] h-9 w-9 rounded-[5px] text-black flex items-center justify-center border border-gray-100 transition-colors hover:bg-gray-50">
             {isSearchOpen ? <X size={18} /> : <Search size={16} />}
           </button>
@@ -257,17 +259,86 @@ export default function Navbar() {
         </div>
       </div>
 
-      {isMobileMenuOpen && (
-        <div className="lg:hidden fixed inset-0 top-20 w-full bg-white shadow-2xl z-[2000] p-6">
-          <div className="flex flex-col space-y-4">
-            {navLinks.map((link) => (
-              <Link key={link.name} href={link.href} onClick={() => setIsMobileMenuOpen(false)} className="text-gray-800 font-bold text-lg border-b border-gray-50 pb-2">
-                {link.name}
-              </Link>
-            ))}
+      {/* MOBILE SEARCH DROPDOWN SECTION */}
+      {isSearchOpen && (
+        <div className="lg:hidden absolute top-20 left-0 w-full bg-white border-b border-gray-100 shadow-xl z-[2005] p-4 animate-in slide-in-from-top-4">
+          <div className="flex items-center border-2 border-[#BCE3C9] rounded-[5px] h-12 overflow-hidden focus-within:border-[#3BB77E]">
+             <div className="pl-3 text-gray-400">
+               <Search size={18} />
+             </div>
+            <input 
+              autoFocus 
+              type="text" 
+              placeholder="Search groceries..." 
+              value={searchQuery} 
+              onChange={(e) => setSearchQuery(e.target.value)} 
+              className="flex-1 px-3 text-sm outline-none bg-transparent font-medium" 
+            />
+            {searchQuery && (
+              <button onClick={() => setSearchQuery("")} className="pr-3 text-gray-400">
+                <X size={16} />
+              </button>
+            )}
           </div>
+          
+          {/* Results Area for Mobile Search */}
+          {searchQuery.length > 1 && (
+             <div className="mt-2 max-h-60 overflow-y-auto bg-gray-50 rounded-lg shadow-inner">
+                {searchResults.length > 0 ? (
+                  searchResults.map((p: any) => (
+                    <Link 
+                      key={p.id} 
+                      href={`/product/${p.slug}`} 
+                      onClick={() => {setIsSearchOpen(false); setSearchQuery("");}} 
+                      className="flex justify-between items-center p-4 hover:bg-white border-b last:border-0"
+                    >
+                      <div className="flex items-center gap-3">
+                         <div className="relative w-8 h-8 rounded bg-white overflow-hidden border">
+                            <Image src={p.images?.[0]?.image || "/placeholder.webp"} alt={p.title} fill className="object-cover" />
+                         </div>
+                         <span className="font-bold text-[#253D4E] text-xs">{p.title}</span>
+                      </div>
+                      <ArrowRight size={14} className="text-[#3BB77E]" />
+                    </Link>
+                  ))
+                ) : !searchLoading && (
+                  <p className="text-center text-gray-400 text-xs py-6 font-bold uppercase italic">No matches for "{searchQuery}"</p>
+                )}
+             </div>
+          )}
         </div>
       )}
+
+      {/* Mobile Menu */}
+      <div className={`lg:hidden fixed inset-0 top-20 w-full bg-white shadow-2xl z-[2000] transition-all duration-500 ease-in-out ${isMobileMenuOpen ? "translate-x-0 opacity-100" : "-translate-x-full opacity-0"}`}>
+        <div className="flex flex-col p-6 space-y-4 overflow-y-auto h-full pb-32">
+          {navLinks.map((link) => (
+            <div key={link.name} className="border-b border-gray-50 pb-2">
+              <div className="flex items-center justify-between py-3">
+                <Link href={link.href} onClick={() => setIsMobileMenuOpen(false)} className="text-gray-800 font-bold text-lg">{link.name}</Link>
+                {link.hasDropdown && (
+                  <button onClick={() => toggleMobileDropdown(link.name)} className="p-2 bg-gray-50 rounded-lg">
+                    {mobileDropdown === link.name ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                  </button>
+                )}
+              </div>
+              {link.hasDropdown && mobileDropdown === link.name && (
+                <div className="bg-gray-50 rounded-xl p-4 mt-2 space-y-4">
+                  {link.name === "Category" && categories.map((cat: any) => (
+                    <Link key={cat.id} href={`/shop?category=${cat.name}`} onClick={() => setIsMobileMenuOpen(false)} className="block text-gray-600 font-medium ml-2 text-sm">{cat.name}</Link>
+                  ))}
+                  {link.name === "Products" && productSections.map((sec) => (
+                    <Link key={sec.name} href={sec.href} onClick={() => setIsMobileMenuOpen(false)} className="block text-gray-600 font-medium ml-2 text-sm">{sec.name}</Link>
+                  ))}
+                  {link.name === "Pages" && createdPages.map((page) => (
+                    <Link key={page.name} href={page.href} onClick={() => setIsMobileMenuOpen(false)} className="block text-gray-600 font-medium ml-2 text-sm">{page.name}</Link>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
     </header>
   );
 }
