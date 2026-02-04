@@ -4,7 +4,7 @@ import { Star, ShoppingCart, Check, Clock } from "lucide-react";
 import { useQuery } from "@apollo/client/react";
 import { gql } from "@apollo/client"; 
 import Image from "next/image";
-import Link from "next/link"; // Import Link for navigation
+import Link from "next/link"; 
 
 // 1. Updated query to use the new backend field
 const GET_DAILY_BEST_SELLS = gql`
@@ -77,8 +77,8 @@ export function DailyBestSells() {
 
   if (error) return null;
 
-  // 3. Mapping data from dailyBestSells instead of popularProducts
-  const allBestSells = data?.dailyBestSells || [];
+  // FIX: Applied 'as any' cast to data to allow property access during production build
+  const allBestSells = (data as any)?.dailyBestSells || [];
 
   const getFilteredBestSells = () => {
     let filtered = [...allBestSells];
@@ -163,7 +163,6 @@ export function DailyBestSells() {
 
                   return (
                     <div key={product.id} className="min-w-[260px] sm:min-w-0 snap-start border border-gray-100 rounded-[2rem] p-5 md:p-6 flex flex-col group hover:border-[#3BB77E] hover:shadow-2xl transition-all bg-white relative">
-                      {/* Image Section - Wrapped in Link for navigation */}
                       <Link href={`/product/${product.slug}`} className="cursor-pointer">
                         <div className="relative h-48 md:h-52 w-full mb-6 mt-4 overflow-hidden rounded-2xl bg-[#f9fbfb]">
                           <Image
@@ -179,7 +178,6 @@ export function DailyBestSells() {
                       <div className="flex flex-col flex-grow">
                         <span className="text-[#3BB77E] text-[10px] font-black uppercase tracking-widest mb-2">{product.category?.name}</span>
                         
-                        {/* Product Title - Wrapped in Link for navigation */}
                         <Link href={`/product/${product.slug}`}>
                           <h4 className="text-[#253D4E] font-bold text-[13px] md:text-sm mb-3 line-clamp-2 h-10 hover:text-[#3BB77E] transition-colors cursor-pointer">
                             {product.title}

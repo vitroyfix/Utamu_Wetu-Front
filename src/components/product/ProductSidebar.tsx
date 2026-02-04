@@ -29,9 +29,11 @@ const GET_SIDEBAR_DATA = gql`
 
 export default function ProductSidebar({ onFilterChange }: { onFilterChange?: (filters: any) => void }) {
   const { data } = useQuery(GET_SIDEBAR_DATA);
-  const categories = data?.allCategories || [];
-  const weights = data?.allWeights || [];
-  const tags = data?.allTags || [];
+  
+  // FIX: Applied type assertions to allow property access during the production build
+  const categories = (data as any)?.allCategories || [];
+  const weights = (data as any)?.allWeights || [];
+  const tags = (data as any)?.allTags || [];
 
   const [globalMax, setGlobalMax] = useState(5000);
   const [currentPrice, setCurrentPrice] = useState(5000);
@@ -39,7 +41,6 @@ export default function ProductSidebar({ onFilterChange }: { onFilterChange?: (f
   const [selectedWeight, setSelectedWeight] = useState<string | null>(null);
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
 
-  // Use a ref to track the last sent filters to prevent the infinite loop
   const lastFiltersRef = useRef<string>("");
 
   useEffect(() => {
@@ -61,10 +62,8 @@ export default function ProductSidebar({ onFilterChange }: { onFilterChange?: (f
         maxPrice: currentPrice
       };
       
-      // Stringify for a quick deep equality check
       const filtersString = JSON.stringify(currentFilters);
       
-      // ONLY trigger the update if the values have actually changed
       if (lastFiltersRef.current !== filtersString) {
         lastFiltersRef.current = filtersString;
         onFilterChange(currentFilters);

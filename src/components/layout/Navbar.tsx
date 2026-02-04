@@ -18,8 +18,6 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useLazyQuery } from "@apollo/client/react";
 import { GET_CATEGORIES, SEARCH_PRODUCTS } from "../../lib/queries";
-// Redirection logic is imported but not used automatically during typing to prevent auto-delete/redirect
-import { handleSmartSearch } from "../../lib/searchUtils";
 
 export default function Navbar() {
   const router = useRouter();
@@ -28,21 +26,20 @@ export default function Navbar() {
   const [cartCount, setCartCount] = useState(0);
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
 
-  // Search Logic States
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const searchRef = useRef<HTMLDivElement>(null);
 
-  // API Hooks
   const { data: catData } = useQuery(GET_CATEGORIES);
-  
-  // Use LazyQuery for efficient backend searching
-  const [executeSearch, { data: searchData, loading: searchLoading }] = useLazyQuery(SEARCH_PRODUCTS);
 
-  const categories = catData?.allCategories || [];
-  const searchResults = searchData?.allProducts || [];
+  // FIX: Define fetchPolicy here instead of inside the execute function
+  const [executeSearch, { data: searchData, loading: searchLoading }] = useLazyQuery(SEARCH_PRODUCTS, {
+    fetchPolicy: "network-only"
+  });
 
-  // Helper to highlight matching text like in the Carrefour image
+  const categories = (catData as any)?.allCategories || [];
+  const searchResults = (searchData as any)?.allProducts || [];
+
   const highlightMatch = (text: string, query: string) => {
     if (!query) return text;
     const parts = text.split(new RegExp(`(${query})`, "gi"));
@@ -55,16 +52,12 @@ export default function Navbar() {
     );
   };
 
-  // FIXED SEARCH LOGIC: Removed automatic redirection to prevent autodelete/jumping
   useEffect(() => {
     const query = searchQuery.trim();
-    
     if (query.length > 1) {
-      // Execute only the backend search to display results in the dropdown
-      // This ensures you stay on the current page while searching
+      // FIX: executeSearch options only accept variables, context, etc.
       executeSearch({ 
-        variables: { searchTerm: query },
-        fetchPolicy: "network-only" 
+        variables: { searchTerm: query }
       });
     }
   }, [searchQuery, executeSearch]);
@@ -131,7 +124,6 @@ export default function Navbar() {
 
   return (
     <header className="w-full bg-white font-sans border-b border-gray-100 sticky top-0 z-[999]">
-      {/* 1. Top Utility Bar */}
       <div className="hidden lg:block border-b border-gray-100 relative z-[1010]">
         <div className="container mx-auto px-4 grid grid-cols-3 items-center py-3">
           <div /> 
@@ -144,7 +136,6 @@ export default function Navbar() {
                 onMouseEnter={() => link.hasDropdown && setActiveDropdown(link.name)}
                 onMouseLeave={() => setActiveDropdown(null)}
               >
-                {/* RESTORED: Standard Link for redirection, Chevron for visual indicator */}
                 <Link href={link.href} className="flex items-center gap-1 transition-all duration-300 hover:text-[#3BB77E] hover:scale-110 active:scale-95 transform origin-center">
                   {link.name} {link.hasDropdown && <ChevronDown size={14} />}
                 </Link>
@@ -181,7 +172,6 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* 2. Main Header Section */}
       <div className="container mx-auto px-4 py-4 flex items-center justify-between gap-4 h-20 relative z-[1001] bg-white">
         <div className="flex items-center gap-1 shrink-0">
           <button
@@ -203,7 +193,6 @@ export default function Navbar() {
           </Link>
         </div>
 
-        {/* Updated Desktop Search Bar (Carrefour Style) */}
         <div className="hidden lg:flex flex-1 max-w-xl relative" ref={searchRef}>
           <div className="flex w-full items-center border-2 border-[#BCE3C9] rounded-[5px] h-11 overflow-hidden focus-within:border-[#3BB77E] transition-all bg-[#F8F9FA]">
              <div className="pl-3 text-gray-400">
@@ -216,11 +205,6 @@ export default function Navbar() {
               onChange={(e) => setSearchQuery(e.target.value)}
               className="flex-1 px-3 text-sm outline-none bg-transparent font-medium"
             />
-            {searchQuery && (
-              <button onClick={() => setSearchQuery("")} className="pr-3 text-gray-400 hover:text-gray-600">
-                <X size={16} />
-              </button>
-            )}
           </div>
           
           {searchQuery && (
@@ -245,20 +229,10 @@ export default function Navbar() {
                   ))
                 ) : !searchLoading && (
                   <div className="p-8 text-center">
-                     <p className="text-gray-400 text-sm font-medium italic">No matches found for "{searchQuery}"</p>
+                     <p className="text-gray-400 text-sm font-medium italic">No matches found</p>
                   </div>
                 )}
               </div>
-              
-              {/* Footer action like "See all results" */}
-              {searchResults.length > 0 && (
-                <button 
-                  onClick={() => {router.push(`/shop?search=${searchQuery}`); setSearchQuery("");}}
-                  className="w-full py-3 bg-gray-50 text-[#3BB77E] text-xs font-black uppercase tracking-wider hover:bg-[#def9ec] transition-colors border-t border-gray-100"
-                >
-                  View all results for "{searchQuery}"
-                </button>
-              )}
             </div>
           )}
         </div>
@@ -283,61 +257,17 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* Mobile Search Dropdown */}
-      {isSearchOpen && (
-        <div className="lg:hidden absolute top-20 left-0 w-full bg-white border-b border-gray-100 shadow-xl z-[2005] p-4 animate-in slide-in-from-top-4">
-          <div className="flex items-center border-2 border-[#BCE3C9] rounded-[5px] h-12 overflow-hidden focus-within:border-[#3BB77E]">
-            <input autoFocus type="text" placeholder="Search groceries..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="flex-1 px-4 text-sm outline-none bg-transparent" />
+      {isMobileMenuOpen && (
+        <div className="lg:hidden fixed inset-0 top-20 w-full bg-white shadow-2xl z-[2000] p-6">
+          <div className="flex flex-col space-y-4">
+            {navLinks.map((link) => (
+              <Link key={link.name} href={link.href} onClick={() => setIsMobileMenuOpen(false)} className="text-gray-800 font-bold text-lg border-b border-gray-50 pb-2">
+                {link.name}
+              </Link>
+            ))}
           </div>
-          {searchQuery && (
-             <div className="mt-4 max-h-60 overflow-y-auto bg-gray-50 rounded-xl p-4">
-                {searchResults.length > 0 ? (
-                  searchResults.map((p: any) => (
-                    <Link key={p.id} href={`/product/${p.slug}`} onClick={() => {setIsSearchOpen(false); setSearchQuery("");}} className="flex justify-between items-center p-3 hover:bg-white rounded-lg mb-2 shadow-sm transition-all">
-                      <span className="font-bold text-[#253D4E] text-sm">{p.title}</span>
-                      <span className={`text-[10px] font-bold px-2 py-1 rounded-full uppercase ${p.totalStock > 0 ? 'text-[#3BB77E] bg-[#def9ec]' : 'text-red-400 bg-red-50'}`}>
-                        {p.totalStock > 0 ? 'In Stock' : 'Finished'}
-                      </span>
-                    </Link>
-                  ))
-                ) : !searchLoading && (
-                  <p className="text-center text-gray-400 text-xs py-4 font-bold uppercase">No results</p>
-                )}
-             </div>
-          )}
         </div>
       )}
-
-      {/* Mobile Menu */}
-      <div className={`lg:hidden fixed inset-0 top-20 w-full bg-white shadow-2xl z-[2000] transition-all duration-500 ease-in-out ${isMobileMenuOpen ? "translate-x-0 opacity-100" : "-translate-x-full opacity-0"}`}>
-        <div className="flex flex-col p-6 space-y-4 overflow-y-auto h-full pb-32">
-          {navLinks.map((link) => (
-            <div key={link.name} className="border-b border-gray-50 pb-2">
-              <div className="flex items-center justify-between py-3">
-                <Link href={link.href} onClick={() => setIsMobileMenuOpen(false)} className="text-gray-800 font-bold text-lg">{link.name}</Link>
-                {link.hasDropdown && (
-                  <button onClick={() => toggleMobileDropdown(link.name)} className="p-2 bg-gray-50 rounded-lg">
-                    {mobileDropdown === link.name ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-                  </button>
-                )}
-              </div>
-              {link.hasDropdown && mobileDropdown === link.name && (
-                <div className="bg-gray-50 rounded-xl p-4 mt-2 space-y-4">
-                  {link.name === "Category" && categories.map((cat: any) => (
-                    <Link key={cat.id} href={`/shop?category=${cat.name}`} onClick={() => setIsMobileMenuOpen(false)} className="block text-gray-600 font-medium ml-2 text-sm">{cat.name}</Link>
-                  ))}
-                  {link.name === "Products" && productSections.map((sec) => (
-                    <Link key={sec.name} href={sec.href} onClick={() => setIsMobileMenuOpen(false)} className="block text-gray-600 font-medium ml-2 text-sm">{sec.name}</Link>
-                  ))}
-                  {link.name === "Pages" && createdPages.map((page) => (
-                    <Link key={page.name} href={page.href} onClick={() => setIsMobileMenuOpen(false)} className="block text-gray-600 font-medium ml-2 text-sm">{page.name}</Link>
-                  ))}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
     </header>
   );
 }

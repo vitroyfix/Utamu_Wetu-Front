@@ -36,7 +36,7 @@ export default function CheckoutPage() {
   const [shippingSpeed, setShippingSpeed] = useState<string>("standard");
   const [selectedAddress, setSelectedAddress] = useState<number | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<string>("mpesa");
-  const [cartItems, setCartItems] = useState<any[]>([]);
+  const [cartItems, setcartItems] = useState<any[]>([]);
   const [isMounted, setIsMounted] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [usePoints, setUsePoints] = useState(false);
@@ -52,8 +52,9 @@ export default function CheckoutPage() {
   const [createOrder, { loading: isPlacingOrder }] = useMutation(CREATE_ORDER);
   const [applyVoucher, { loading: isApplyingPromo }] = useMutation(APPLY_VOUCHER);
 
-  const { walletBalance, loyaltyPoints, calculatePointsValue } = useUserRewards(profileData?.me);
-  const addresses = profileData?.me?.addresses || [];
+  // FIX: Type assertions to 'any' resolve build errors for property access
+  const { walletBalance, loyaltyPoints, calculatePointsValue } = useUserRewards((profileData as any)?.me);
+  const addresses = (profileData as any)?.me?.addresses || [];
 
   useEffect(() => {
     const checkAuth = () => setIsLoggedIn(!!localStorage.getItem("token"));
@@ -62,11 +63,11 @@ export default function CheckoutPage() {
     const sessionData = localStorage.getItem("checkout_session");
     if (sessionData) {
       const parsed = JSON.parse(sessionData);
-      setCartItems(parsed.items || []);
+      setcartItems(parsed.items || []);
       setPassedTotals(parsed.totals || null);
     } else {
       const savedCart = localStorage.getItem("cartItems");
-      if (savedCart) setCartItems(JSON.parse(savedCart));
+      if (savedCart) setcartItems(JSON.parse(savedCart));
     }
 
     setIsMounted(true);
@@ -79,11 +80,13 @@ export default function CheckoutPage() {
     if (!promoCode) return;
     try {
       const { data } = await applyVoucher({ variables: { code: promoCode } });
-      if (data?.applyVoucher?.success) {
-        alert(data.applyVoucher.message);
-        setPromoDiscount(50); // Example fixed discount
+      
+      // FIX: Assert 'data' as 'any' to allow access to mutation result properties
+      if ((data as any)?.applyVoucher?.success) {
+        alert((data as any).applyVoucher.message);
+        setPromoDiscount(50); 
       } else {
-        alert(data?.applyVoucher?.message || "Invalid Code");
+        alert((data as any)?.applyVoucher?.message || "Invalid Code");
       }
     } catch (err) { alert("Error applying promo"); }
   };
@@ -91,7 +94,7 @@ export default function CheckoutPage() {
   // --- DELETE FUNCTIONALITY ---
   const removeItem = (id: number) => {
     const updatedItems = cartItems.filter(item => item.id !== id);
-    setCartItems(updatedItems);
+    setcartItems(updatedItems);
     localStorage.setItem("cartItems", JSON.stringify(updatedItems));
     if (localStorage.getItem("checkout_session")) {
       const session = JSON.parse(localStorage.getItem("checkout_session")!);
@@ -104,7 +107,6 @@ export default function CheckoutPage() {
   // --- CALCULATIONS ---
   const subtotal = cartItems.reduce((acc, item) => acc + (parseFloat(item.price) * item.qty), 0);
   
-  // Dynamic Shipping Fee calculation according to user preference
   const BASE_SHIPPING = passedTotals ? parseFloat(passedTotals.shipping) : 150.00;
   const SHIPPING_FEE = shippingSpeed === "express" ? BASE_SHIPPING + 200 : BASE_SHIPPING;
   
@@ -126,11 +128,13 @@ export default function CheckoutPage() {
       const { data } = await createOrder({ 
         variables: { addressId: selectedAddress || 1, itemsJson } 
       });
-      if (data?.createOrder?.order) {
+      
+      // FIX: Assert 'data' as 'any' for production build access
+      if ((data as any)?.createOrder?.order) {
         localStorage.removeItem("cartItems");
         localStorage.removeItem("checkout_session");
         window.dispatchEvent(new Event("cartUpdated"));
-        router.push(`/order-success?orderNumber=${data.createOrder.order.orderNumber}`);
+        router.push(`/order-success?orderNumber=${(data as any).createOrder.order.orderNumber}`);
       }
     } catch (err) { alert("Checkout failed."); }
   };
@@ -155,7 +159,6 @@ export default function CheckoutPage() {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
             
             <div className="order-2 lg:order-1 lg:col-span-5 space-y-6">
-              {/* 1. Delivery Location */}
               <div className={`bg-white border border-green-100 rounded-lg md:rounded-[1rem] shadow-sm p-5 md:p-8 ${!isLoggedIn ? 'opacity-50 pointer-events-none' : ''}`}>
                 <h2 className="text-[10px] md:text-xs lg:text-sm font-black uppercase mb-4 flex items-center gap-2 text-[#3BB77E] tracking-widest">
                   <Navigation size={16} /> 1. Delivery Location
@@ -187,7 +190,6 @@ export default function CheckoutPage() {
                 </div>
               </div>
 
-              {/* 2. Payment Details */}
               <div className={`bg-white border border-green-100 rounded-2xl md:rounded-[1rem] shadow-sm p-5 md:p-8 ${!isLoggedIn ? 'opacity-50' : ''}`}>
                 <h2 className="text-[10px] md:text-xs lg:text-sm font-black uppercase mb-4 flex items-center gap-2 text-[#3BB77E] tracking-widest">
                   <CreditCard size={16} /> 2. Payment Details
@@ -221,7 +223,6 @@ export default function CheckoutPage() {
                 </div>
               </div>
 
-              {/* 3. Shipping Speed */}
               <div className="bg-white border border-green-100 rounded-2xl md:rounded-[1rem] shadow-sm p-5 md:p-8">
                 <h2 className="text-[10px] md:text-xs lg:text-sm font-black uppercase mb-4 flex items-center gap-2 text-[#3BB77E] tracking-widest">
                   <Truck size={16} /> 3. Shipping Speed
@@ -240,7 +241,6 @@ export default function CheckoutPage() {
             </div>
 
             <div className="order-1 lg:order-2 lg:col-span-7 space-y-6 lg:sticky lg:top-24">
-              {/* Rewards */}
               {isLoggedIn && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div onClick={() => setUseWallet(!useWallet)} className={`p-5 rounded-[1.5rem] border-2 cursor-pointer transition-all flex items-center justify-between ${useWallet ? 'border-[#3BB77E] bg-[#F0FDF4]' : 'bg-white border-gray-100'}`}>
@@ -260,7 +260,6 @@ export default function CheckoutPage() {
                 </div>
               )}
 
-              {/* Order Review */}
               <section className="bg-white border border-green-100 rounded-[1rem] shadow-2xl overflow-hidden flex flex-col">
                 <div className="bg-[#f8fbf9] p-3 md:p-5 border-b border-gray-100 flex justify-between items-center">
                   <h3 className="font-black uppercase text-xs md:text-sm tracking-widest text-[#253D4E]">Order Review</h3>
@@ -272,7 +271,6 @@ export default function CheckoutPage() {
                     {cartItems.map((item) => (
                       <div key={item.id} className="flex items-center gap-4 md:gap-8 group relative">
                         <div className="relative w-12 h-12 md:w-20 md:h-20 bg-gray-50 rounded-2xl overflow-hidden border border-gray-100 shrink-0">
-                          {/* FIX: Changed object-contain to object-cover */}
                           <Image src={item.images?.[0]?.image || "/placeholder.webp"} alt={item.title} fill className="object-cover transition-transform duration-500 group-hover:scale-105" unoptimized />
                         </div>
                         <div className="flex-1 min-w-0">
@@ -287,7 +285,6 @@ export default function CheckoutPage() {
                     ))}
                   </div>
 
-                  {/* PROMO SECTION */}
                   <div className="mb-6 p-4 bg-gray-50 border border-gray-100 rounded-xl">
                     <p className="text-[8px] md:text-[10px] font-black uppercase text-gray-400 mb-2 tracking-widest">Apply Promo Code</p>
                     <div className="flex gap-2">
@@ -313,7 +310,6 @@ export default function CheckoutPage() {
 
                   <div className="bg-[#fcfdfd] border border-gray-100 rounded-[1rem] p-4 md:p-5 space-y-2 mt-auto shadow-inner">
                     <div className="flex justify-between text-[9px] md:text-xs font-bold text-gray-400 tracking-widest"><span>Subtotal</span><span className="text-[#253D4E]">KES {subtotal.toLocaleString()}</span></div>
-                    {/* Updated Shipping Fees display according to what the user prefers (speed selection) */}
                     <div className="flex justify-between text-[9px] md:text-xs font-bold text-[#3BB77E] uppercase"><span>Delivery ({shippingSpeed})</span><span>KES {SHIPPING_FEE.toLocaleString()}</span></div>
                     <div className="flex justify-between text-[9px] md:text-xs font-bold text-gray-400 tracking-widest"><span>VAT (16%)</span><span className="text-[#253D4E]">KES {vatAmount.toLocaleString()}</span></div>
                     <div className="flex justify-between text-[9px] md:text-xs font-bold text-gray-400 tracking-widest"><span>Service Fee</span><span className="text-[#253D4E]">KES {SERVICE_FEE.toLocaleString()}</span></div>
@@ -359,7 +355,11 @@ function BrandedInput({ color, icon, label, placeholder }: any) {
     <div className="space-y-2">
       <label className="text-[8px] md:text-[10px] lg:text-xs font-black uppercase text-gray-300 tracking-widest ml-1 leading-none">{label}</label>
       <div className="relative">
-        {icon && <div className="absolute left-4 top-1/2 -translate-y-1/2" style={{ color: color }}>{React.cloneElement(icon as React.ReactElement, { className: "w-4 h-4 md:w-5 md:h-5" })}</div>}
+        {icon && (
+          <div className="absolute left-4 top-1/2 -translate-y-1/2" style={{ color: color }}>
+            {React.cloneElement(icon as any, { className: "w-4 h-4 md:w-5 md:h-5" })}
+          </div>
+        )}
         <input 
           type="text" 
           placeholder={placeholder} 
@@ -374,7 +374,7 @@ function BrandedInput({ color, icon, label, placeholder }: any) {
 function TabBtn({ active, onClick, icon, label }: any) {
   return (
     <button onClick={onClick} className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg transition-all text-[8px] md:text-[10px] font-black uppercase tracking-widest ${active ? 'bg-white text-[#3BB77E] shadow-sm' : 'text-gray-400'}`}>
-      {React.cloneElement(icon as React.ReactElement, { className: "w-3 h-3 md:w-4 md:h-4" })} {label}
+      {React.cloneElement(icon as any, { className: "w-3 h-3 md:w-4 md:h-4" })} {label}
     </button>
   );
 }
@@ -382,7 +382,7 @@ function TabBtn({ active, onClick, icon, label }: any) {
 function PaymentMiniBtn({ active, onClick, label, logo, icon }: any) {
   return (
     <div onClick={onClick} className={`p-2 rounded-lg border-2 cursor-pointer transition-all flex flex-col items-center justify-center gap-1 h-14 md:h-20 ${active ? 'border-[#3BB77E] bg-[#F0FDF4]' : 'border-gray-50 bg-gray-50/50'}`}>
-      {logo ? <img src={logo} className="h-3 md:h-5 w-auto object-contain" alt={label} /> : icon && React.cloneElement(icon as React.ReactElement, { className: "w-4 h-4 md:w-6 md:h-6" })}
+      {logo ? <img src={logo} className="h-3 md:h-5 w-auto object-contain" alt={label} /> : icon && React.cloneElement(icon as any, { className: "w-4 h-4 md:w-6 md:h-6" })}
       <span className={`text-[6px] md:text-[8px] font-black uppercase tracking-tighter ${active ? 'text-[#3BB77E]' : 'text-gray-400'}`}>{label}</span>
     </div>
   );

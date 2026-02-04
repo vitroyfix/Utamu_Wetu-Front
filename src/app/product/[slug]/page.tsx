@@ -32,7 +32,8 @@ function PopularProductsGrid({ filters }: { filters: any }) {
   });
 
   const [addedItemId, setAddedItemId] = useState<string | null>(null);
-  const products = data?.popularProducts || [];
+  // FIX: Type assertion to allow access to popularProducts property
+  const products = (data as any)?.popularProducts || [];
 
   const addItemToCart = (item: any) => {
     const currentCart = JSON.parse(localStorage.getItem("cartItems") || "[]");
@@ -126,8 +127,8 @@ export default function ProductDetailsPage({
   });
 
   useEffect(() => {
-    if (data?.productBySlug) {
-      const product = data.productBySlug;
+    if ((data as any)?.productBySlug) {
+      const product = (data as any).productBySlug;
       const recentViewed = JSON.parse(localStorage.getItem("recentlyViewed") || "[]");
       const updatedList = [
         product,
@@ -138,7 +139,7 @@ export default function ProductDetailsPage({
   }, [data]);
 
   const addToCart = () => {
-    const product = data.productBySlug;
+    const product = (data as any).productBySlug;
     const currentCart = JSON.parse(localStorage.getItem("cartItems") || "[]");
     const existingItemIndex = currentCart.findIndex((item: any) => item.id === product.id);
 
@@ -160,24 +161,22 @@ export default function ProductDetailsPage({
   }, []);
 
   if (loading) return <div className="p-10 text-center animate-pulse text-[#3BB77E] font-bold">Loading Fresh Products...</div>;
-  if (error || !data?.productBySlug) return <div className="p-10 text-center font-bold text-[#253D4E]">Product not found.</div>;
+  if (error || !(data as any)?.productBySlug) return <div className="p-10 text-center font-bold text-[#253D4E]">Product not found.</div>;
 
-  const product = data.productBySlug;
+  const product = (data as any).productBySlug;
   const galleryImages = product.images || [];
   const nutritionText = product.nutritionalInfo || "";
 
-  /** * NEW PARSER: Handles "Nutrient; Amount; %DV" structure.
-   * Splits by semicolon and groups every 3 items into a row.
-   */
-  const nutritionArray = nutritionText.split(';').map(item => item.trim()).filter(item => item !== "");
+  // FIX: Explicitly type 'item' as string to resolve TypeScript build error
+  const nutritionArray = nutritionText.split(';').map((item: string) => item.trim()).filter((item: string) => item !== "");
   const parsedNutrition = [];
   for (let i = 0; i < nutritionArray.length; i += 3) {
     if (nutritionArray[i]) {
       parsedNutrition.push({
         n: nutritionArray[i],
-        a: nutritionArray[i + 1] || "—",
-        p: nutritionArray[i + 2] || "—",
-        b: !nutritionArray[i].startsWith('–') // Sub-nutrients start with em-dash
+        a: nutritionArray[i + 1] || "\u2014",
+        p: nutritionArray[i + 2] || "\u2014",
+        b: !nutritionArray[i].startsWith('\u2013') 
       });
     }
   }
@@ -245,7 +244,7 @@ export default function ProductDetailsPage({
 
                 <div className="flex flex-wrap items-center gap-4">
                   <div className="flex items-center border border-gray-200 rounded-md h-12 overflow-hidden bg-white shadow-sm">
-                    <button onClick={decrement} className="w-10 h-full hover:bg-gray-50 text-gray-400 transition-colors">−</button>
+                    <button onClick={decrement} className="w-10 h-full hover:bg-gray-50 text-gray-400 transition-colors">\u2212</button>
                     <input type="number" value={quantity} readOnly className="w-12 text-center font-bold text-sm text-[#253D4E] outline-none appearance-none m-0 bg-transparent" />
                     <button onClick={increment} className="w-10 h-full hover:bg-gray-50 text-gray-400 transition-colors">+</button>
                   </div>
@@ -301,7 +300,6 @@ export default function ProductDetailsPage({
                   <div className="space-y-8">
                     <h5 className="font-bold text-[#253D4E] uppercase text-xs tracking-widest flex items-center gap-2 font-bold"><Leaf size={14} /> Nutritional Content</h5>
                     
-                    {/* Ingredients Table Structure */}
                     <div className="overflow-hidden border border-gray-100 rounded-xl max-w-2xl mb-8">
                       <div className="bg-[#f9fbfb] px-6 py-4 border-b border-gray-100">
                         <span className="text-[#253D4E] font-bold text-sm uppercase tracking-wide">Ingredients Composition</span>
@@ -320,7 +318,6 @@ export default function ProductDetailsPage({
                       </div>
                     </div>
 
-                    {/* DYNAMIC NUTRITION FACTS TABLE */}
                     <div className="max-w-md border-2 border-black p-4 bg-white font-sans text-black shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)]">
                       <h6 className="text-3xl font-black border-b-[8px] border-black pb-1 uppercase tracking-tighter">Nutrition Facts</h6>
                       <div className="flex justify-between font-bold border-b-4 border-black py-1 text-xs uppercase tracking-wider">

@@ -38,7 +38,8 @@ export default function ProductShowcase() {
     return null; 
   }
 
-  const showcases = data?.allShowcases || [];
+  // FIX: Type assertion to 'any' allows access to allShowcases during production build
+  const showcases = (data as any)?.allShowcases || [];
 
   return (
     <section className="py-12 bg-white">
@@ -59,7 +60,7 @@ export default function ProductShowcase() {
             autoplay={{
               delay: 3000,
               disableOnInteraction: false,
-              pauseOnMouseEnter: true, // NEW: Stops the carousel on hover
+              pauseOnMouseEnter: true, 
             }}
             pagination={{ clickable: true }}
             breakpoints={{
@@ -101,7 +102,6 @@ export default function ProductShowcase() {
                       {item.title}
                     </h4>
                     
-                    {/* Visual Button for Shop Now */}
                     <div className="flex items-center gap-2 text-sm font-semibold text-white/90">
                       <span className="bg-[#3BB77E] px-4 py-2 rounded-md group-hover:bg-[#2e9163] transition-colors">
                         Shop Now

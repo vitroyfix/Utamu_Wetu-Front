@@ -8,7 +8,7 @@ import Link from "next/link";
 import { Star } from "lucide-react";
 
 export default function CategoryBanner() {
-  // Fetching data with maxPrice filter as requested by your query structure
+  // Fetching data with maxPrice filter
   const { data, loading, error } = useQuery(GET_POPULAR_PRODUCTS, {
     variables: { maxPrice: 50000 },
     fetchPolicy: "cache-and-network",
@@ -31,7 +31,8 @@ export default function CategoryBanner() {
       </div>
     );
 
-  const allProducts = data?.popularProducts || [];
+  // FIX: Type assertion to 'any' allows access to popularProducts property during production build
+  const allProducts = (data as any)?.popularProducts || [];
 
   // Grouping logic ensuring each specific section lists relevant products
   const collections =
@@ -80,7 +81,7 @@ export default function CategoryBanner() {
                     key={product.id}
                     className="flex items-center gap-4 group cursor-pointer shrink-0 min-w-[280px] md:min-w-0 snap-start bg-[#f9fbfb] md:bg-transparent p-3 md:p-0 rounded-2xl border border-gray-50 md:border-none shadow-sm md:shadow-none"
                   >
-                    {/* Image Box - Updated with object-cover for perfect fit */}
+                    {/* Image Box - object-cover for perfect fit */}
                     <div className="relative w-20 h-20 md:w-24 md:h-24 flex-shrink-0 bg-white rounded-xl overflow-hidden border border-gray-100">
                       <Image
                         src={product.images?.[0]?.image || "/placeholder.png"}

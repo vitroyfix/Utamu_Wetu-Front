@@ -76,8 +76,9 @@ export default function PopularProducts() {
               All
             </button>
 
+            {/* FIX: Cast catData as any to allow property access during build */}
             {!catLoading &&
-              catData?.allCategories.map((cat: any) => (
+              (catData as any)?.allCategories?.map((cat: any) => (
                 <button
                   key={cat.id}
                   onClick={() => setActiveCategory(cat.name)}
@@ -118,7 +119,6 @@ export default function PopularProducts() {
                     )}
 
                     <Link href={productLink} className="cursor-pointer">
-                      {/* FIX: Set container to relative with specific height and overflow-hidden */}
                       <div className="h-32 md:h-44 w-full relative mb-3 mt-2 overflow-hidden bg-white rounded-lg">
                         {imageUrl ? (
                           <Image

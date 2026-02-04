@@ -4,7 +4,7 @@ import { Star, ShoppingCart, Check } from "lucide-react";
 import { useQuery } from "@apollo/client/react";
 import { GET_DEALS_OF_THE_DAY } from "../../lib/queries";
 import Image from "next/image";
-import Link from "next/link"; // Import Link for navigation
+import Link from "next/link"; 
 
 export function DealsOfTheDay() {
   const { data, loading, error } = useQuery(GET_DEALS_OF_THE_DAY);
@@ -33,9 +33,10 @@ export function DealsOfTheDay() {
 
   if (error) return null;
 
+  // FIX: Applied 'as any' cast to data to allow property access during production build
   // PRIORITY LOGIC: Sort deals by soldCount descending so top sellers appear first
-  const deals = data?.dealsOfTheDay 
-    ? [...data.dealsOfTheDay].sort((a, b) => (b.soldCount || 0) - (a.soldCount || 0)) 
+  const deals = (data as any)?.dealsOfTheDay 
+    ? [...(data as any).dealsOfTheDay].sort((a, b) => (b.soldCount || 0) - (a.soldCount || 0)) 
     : [];
 
   return (
@@ -147,7 +148,7 @@ export function DealsOfTheDay() {
                             addedItemId === product.id 
                             ? "bg-orange-500 text-white shadow-orange-200" 
                             : "bg-[#DEF9EC] text-[#3BB77E] hover:bg-[#3BB77E] hover:text-white"
-                          } px-4 py-2.5 rounded-xl text-xs font-black flex items-center gap-2 transition-all active:scale-90 shadow-sm`}
+                          } px-4 py-2.5 rounded-xl text-xs font-black flex items-center justify-center gap-2 transition-all active:scale-90 shadow-sm`}
                         >
                           {addedItemId === product.id ? (
                             <>

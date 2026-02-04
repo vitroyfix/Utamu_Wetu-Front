@@ -69,15 +69,15 @@ export default function NewsIcon() {
 
           <div
             className="absolute bottom-0 right-0 
-            w-[85%] sm:w-[60%] md:w-[500px]      /* Increased width for mobile */
+            w-[85%] sm:w-[60%] md:w-[500px]
             z-0 pointer-events-none 
-            opacity-30 md:opacity-100           /* Lower opacity on mobile for readability */
+            opacity-30 md:opacity-100
             transition-all duration-500"
           >
             <img
               src="/deliveryman.png"
               alt="Delivery Service"
-              className="w-full h-[400px] md:h-[500px] /* Increased mobile height */
+              className="w-full h-[400px] md:h-[500px] 
               object-contain object-right-bottom"
             />
           </div>
@@ -93,7 +93,8 @@ export default function NewsIcon() {
                 className="bg-[#F4F6FA] p-6 rounded-2xl flex items-center gap-4 transition-all hover:shadow-md hover:-translate-y-1 cursor-pointer h-full"
               >
                 <div className="text-[#3BB77E] shrink-0">
-                  {React.cloneElement(feature.icon as React.ReactElement, {
+                  {/* FIX: Assert icon as any to resolve strict property build errors */}
+                  {React.cloneElement(feature.icon as any, {
                     size: 36,
                     strokeWidth: 1.5,
                   })}

@@ -136,7 +136,6 @@ export default function CartPage() {
                       <tr key={item.id} className="group hover:bg-[#3BB77E]/[0.02] transition-colors">
                         <td className="px-6 xl:px-10 py-8 flex items-center gap-4 xl:gap-8">
                           <div className="relative w-20 h-20 xl:w-28 xl:h-28 bg-[#F2F3F4] rounded-2xl overflow-hidden border border-gray-100 shrink-0">
-                            {/* FIX: Changed object-contain to object-cover */}
                             <Image src={item.images?.[0]?.image || "/placeholder.webp"} alt={item.title} fill className="object-cover transition-transform duration-500 group-hover:scale-105" unoptimized />
                           </div>
                           <span className="block font-bold text-[#253D4E] text-base xl:text-lg leading-tight">{item.title}</span>
@@ -166,7 +165,6 @@ export default function CartPage() {
                       <Trash2 size={18} />
                     </button>
                     <div className="relative w-24 h-24 bg-[#F2F3F4] rounded-2xl overflow-hidden border border-gray-100 shrink-0">
-                      {/* FIX: Changed object-contain to object-cover */}
                       <Image src={item.images?.[0]?.image || "/placeholder.webp"} alt={item.title} fill className="object-cover" unoptimized />
                     </div>
                     <div className="flex flex-col justify-between py-1 flex-1">
@@ -242,13 +240,13 @@ export default function CartPage() {
           </h2>
           
           <div className="flex overflow-x-auto pb-6 gap-4 snap-x snap-mandatory no-scrollbar sm:grid sm:grid-cols-2 lg:grid-cols-4 md:gap-8 md:overflow-visible">
-            {(recentlyViewed.length > 0 ? recentlyViewed : (recentData?.popularProducts || [])).slice(0, 4).map((item: any) => (
+            {/* FIX: Applied 'as any' cast to recentData to allow build to access popularProducts */}
+            {(recentlyViewed.length > 0 ? recentlyViewed : ((recentData as any)?.popularProducts || [])).slice(0, 4).map((item: any) => (
               <div 
                 key={item.id} 
                 className="min-w-[260px] sm:min-w-0 snap-start group border border-gray-50 rounded-[2rem] md:rounded-[2.5rem] p-4 md:p-6 bg-white relative overflow-hidden transition-all duration-300 hover:border-[#3BB77E] hover:shadow-[0_0_15px_rgba(59,183,126,0.15)]"
               >
                 <div className="relative aspect-square mb-4 md:mb-6 bg-[#ffffff] rounded-2xl md:rounded-3xl overflow-hidden">
-                  {/* FIX: Changed object-contain to object-cover */}
                   <Image src={item.images?.[0]?.image || "/placeholder.webp"} alt={item.title} fill className="object-cover group-hover:scale-110 transition-transform duration-700" unoptimized />
                 </div>
                 <div className="space-y-2 md:space-y-3">

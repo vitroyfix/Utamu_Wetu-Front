@@ -6,7 +6,7 @@ interface VoucherItemProps {
   voucher: {
     id: string;
     code: string;
-    discountAmount: number;
+    discountAmount: number | string; // Updated to handle potential string/decimal types
     expiryDate: string;
   };
   onApply: (code: string) => void;
@@ -25,7 +25,10 @@ export const VoucherItem = ({ voucher, onApply, isApplying }: VoucherItemProps) 
           <Ticket size={24}/>
         </div>
         <div className="text-right">
-          <span className="text-lg font-black text-[#3BB77E] block">{voucher.discountAmount}% OFF</span>
+          {/* Robust parsing for the discount percentage */}
+          <span className="text-lg font-black text-[#3BB77E] block">
+            {Number(voucher.discountAmount)}% OFF
+          </span>
           <span className="text-[8px] font-bold text-gray-400 uppercase">Limited Time</span>
         </div>
       </div>

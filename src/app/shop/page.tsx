@@ -37,9 +37,9 @@ export default function ShopPage() {
     fetchPolicy: "network-only", // Ensures fresh data from server
   });
 
-  // Map to allProducts instead of popularProducts
-  const rawProducts = data?.allProducts || [];
-  const categories = catData?.allCategories || [];
+  // FIX: Applied 'as any' cast to data and catData to allow property access during build
+  const rawProducts = (data as any)?.allProducts || [];
+  const categories = (catData as any)?.allCategories || [];
 
   // SORTING LOGIC: Enabled sorting for newest, price-low, and price-high
   const products = [...rawProducts].sort((a, b) => {
@@ -58,7 +58,7 @@ export default function ShopPage() {
 
   const addToCart = (product: any) => {
     const currentCart = JSON.parse(localStorage.getItem("cartItems") || "[]");
-    const existingItemIndex = currentCart.findIndex((item: any) => item.id === product.id);
+    const existingItemIndex = currentCart.findIndex((cartItem: any) => cartItem.id === product.id);
 
     if (existingItemIndex > -1) {
       currentCart[existingItemIndex].qty += 1;
