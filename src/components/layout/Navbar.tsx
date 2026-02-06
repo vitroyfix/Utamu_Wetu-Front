@@ -32,7 +32,6 @@ export default function Navbar() {
 
   const { data: catData } = useQuery(GET_CATEGORIES);
 
-  // FIX: Define fetchPolicy here instead of inside the execute function
   const [executeSearch, { data: searchData, loading: searchLoading }] = useLazyQuery(SEARCH_PRODUCTS, {
     fetchPolicy: "network-only"
   });
@@ -144,7 +143,7 @@ export default function Navbar() {
                   <div className="absolute top-full left-1/2 -translate-x-1/2 pt-2 w-64 z-[1100]">
                     <div className="bg-white border border-gray-100 shadow-xl rounded-lg py-4 transition-all duration-200">
                       {link.name === "Category" && categories.map((cat: any) => (
-                        <Link key={cat.id} href={`/shop?category=${cat.name}`} onClick={() => setActiveDropdown(null)} className="block px-8 py-3 text-gray-700 hover:text-[#3BB77E] hover:bg-gray-50 font-medium text-sm">
+                        <Link key={cat.id} href={`/shop?category=${encodeURIComponent(cat.name)}`} onClick={() => setActiveDropdown(null)} className="block px-8 py-3 text-gray-700 hover:text-[#3BB77E] hover:bg-gray-50 font-medium text-sm">
                           {cat.name}
                         </Link>
                       ))}
@@ -185,7 +184,7 @@ export default function Navbar() {
 
           <Link href="/" className="flex items-center gap-1 md:gap-3">
             <div className="relative w-10 h-10 md:w-14 md:h-14 bg-[#F2F3F4] rounded-full overflow-hidden flex items-center justify-center border-2 border-[#BCE3C9]">
-              <Image src="/groceries.webp" alt="Logo" fill className="object-cover" />
+              <Image src="/groceries.webp" alt="Logo" fill className="object-cover" sizes="56px"/>
             </div>
             <div className="flex flex-col">
               <span className="text-sm md:text-2xl font-bold leading-none text-[#253D4E]">Utamu Wetu</span>
@@ -215,9 +214,9 @@ export default function Navbar() {
                   searchResults.map((p: any) => (
                     <Link 
                       key={p.id} 
-                      href={`/product/${p.slug}`} 
+                      href={`/shop?search=${encodeURIComponent(p.title)}`} 
                       onClick={() => setSearchQuery("")} 
-                      className="flex items-center justify-between px-4 py-3 hover:bg-blue-50/50 group border-b border-gray-50 last:border-0"
+                      className="flex items-center justify-between px-4 py-3 hover:bg-[#def9ec] group border-b border-gray-50 last:border-0"
                     >
                       <div className="flex items-center gap-4">
                         <Search size={16} className="text-gray-300" />
@@ -225,7 +224,7 @@ export default function Navbar() {
                           {highlightMatch(p.title, searchQuery)}
                         </span>
                       </div>
-                      <ArrowRight size={16} className="text-blue-500 opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all" />
+                      <ArrowRight size={16} className="text-[#3BB77E] opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all" />
                     </Link>
                   ))
                 ) : !searchLoading && (
@@ -243,12 +242,15 @@ export default function Navbar() {
           <button onClick={() => setIsSearchOpen(!isSearchOpen)} className="lg:hidden bg-[#ffffff] h-9 w-9 rounded-[5px] text-black flex items-center justify-center border border-gray-100 transition-colors hover:bg-gray-50">
             {isSearchOpen ? <X size={18} /> : <Search size={16} />}
           </button>
+          
+          {/* WISHLIST RESTORED */}
           <Link href="/wishlist" className="flex items-center gap-1 group transition-all duration-300 hover:scale-110">
             <div className="relative">
               <Heart size={18} className="text-gray-700 group-hover:text-[#3BB77E] md:w-6 md:h-6" />
               <span className="absolute -top-1.5 -right-1.5 bg-[#3BB77E] text-white text-[7px] md:text-[10px] w-3.5 h-3.5 md:w-4 md:h-4 rounded-full flex items-center justify-center font-bold border border-white">0</span>
             </div>
           </Link>
+
           <Link href="/cart" className="flex items-center gap-1 group transition-all duration-300 hover:scale-110">
             <div className="relative">
               <ShoppingCart size={18} className="text-gray-700 group-hover:text-[#3BB77E] md:w-6 md:h-6" />
@@ -274,21 +276,15 @@ export default function Navbar() {
               onChange={(e) => setSearchQuery(e.target.value)} 
               className="flex-1 px-3 text-sm outline-none bg-transparent font-medium" 
             />
-            {searchQuery && (
-              <button onClick={() => setSearchQuery("")} className="pr-3 text-gray-400">
-                <X size={16} />
-              </button>
-            )}
           </div>
           
-          {/* Results Area for Mobile Search */}
           {searchQuery.length > 1 && (
              <div className="mt-2 max-h-60 overflow-y-auto bg-gray-50 rounded-lg shadow-inner">
                 {searchResults.length > 0 ? (
                   searchResults.map((p: any) => (
                     <Link 
                       key={p.id} 
-                      href={`/product/${p.slug}`} 
+                      href={`/shop?search=${encodeURIComponent(p.title)}`} 
                       onClick={() => {setIsSearchOpen(false); setSearchQuery("");}} 
                       className="flex justify-between items-center p-4 hover:bg-white border-b last:border-0"
                     >
@@ -325,7 +321,7 @@ export default function Navbar() {
               {link.hasDropdown && mobileDropdown === link.name && (
                 <div className="bg-gray-50 rounded-xl p-4 mt-2 space-y-4">
                   {link.name === "Category" && categories.map((cat: any) => (
-                    <Link key={cat.id} href={`/shop?category=${cat.name}`} onClick={() => setIsMobileMenuOpen(false)} className="block text-gray-600 font-medium ml-2 text-sm">{cat.name}</Link>
+                    <Link key={cat.id} href={`/shop?category=${encodeURIComponent(cat.name)}`} onClick={() => setIsMobileMenuOpen(false)} className="block text-gray-600 font-medium ml-2 text-sm">{cat.name}</Link>
                   ))}
                   {link.name === "Products" && productSections.map((sec) => (
                     <Link key={sec.name} href={sec.href} onClick={() => setIsMobileMenuOpen(false)} className="block text-gray-600 font-medium ml-2 text-sm">{sec.name}</Link>
